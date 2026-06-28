@@ -18,14 +18,15 @@ pcall(function() ScreenGui.Parent = game.CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 480, 0, 540)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -270)
+MainFrame.Size = UDim2.new(0, 530, 0, 590)
+MainFrame.Position = UDim2.new(0.5, -265, 0.5, -295)
 MainFrame.BackgroundColor3 = Color3.fromRGB(23, 23, 23)
-MainFrame.BackgroundTransparency = 0.23
+MainFrame.BackgroundTransparency = 0.18
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
+MainFrame.Visible = true
 MainFrame.ClipsDescendants = true
 
 local Title = Instance.new("TextLabel")
@@ -393,7 +394,7 @@ end
 
 local function makePlayerDropdown(tab, xpos, ypos)
     local ddBtn = Instance.new("TextButton", tab)
-    ddBtn.Size = UDim2.new(0,240,0,32)
+    ddBtn.Size = UDim2.new(0,260,0,32)
     ddBtn.Position = UDim2.new(0, xpos or 18,0,ypos)
     ddBtn.BackgroundColor3 = Color3.fromRGB(44,49,66)
     ddBtn.TextColor3 = Color3.fromRGB(230,230,230)
@@ -411,7 +412,7 @@ local function makePlayerDropdown(tab, xpos, ypos)
                 table.insert(playerList, plr)
             end
         end
-        popup.Size = UDim2.new(0,210,0,#playerList>0 and 32*#playerList or 32)
+        popup.Size = UDim2.new(0,225,0,#playerList>0 and 32*#playerList or 32)
         popup.Position = UDim2.new(0, MainFrame.AbsolutePosition.X+MainFrame.Size.X.Offset+8, 0, MainFrame.AbsolutePosition.Y+64)
         popup.BackgroundColor3 = Color3.fromRGB(31,31,38)
         popup.BorderSizePixel = 2
@@ -453,7 +454,7 @@ end
 
 local playerDropdown = makePlayerDropdown(tabPlayer, 16, 50)
 
-addBtn(tabPlayer,16,96,175,"Araba Fırlat",function()
+addBtn(tabPlayer,16,96,185,"Araba Fırlat",function()
     for _,v in ipairs(Workspace:GetChildren()) do
         if v:IsA("Model") and v:FindFirstChildWhichIsA("VehicleSeat") then
             local pos = v:GetPivot().Position
@@ -466,8 +467,10 @@ addBtn(tabPlayer,16,96,175,"Araba Fırlat",function()
     end
 end)
 
-addBtn(tabPlayer,210,96,225,"Yak Player",function()
-    if not selectedTarget or not selectedTarget.Character then return end
+addBtn(tabPlayer,210,96,245,"Yak Player",function()
+    if not selectedTarget or not selectedTarget.Character then
+        return
+    end
     for _,v in ipairs(selectedTarget.Character:GetDescendants()) do
         if v:IsA("BasePart") then
             v.BrickColor = BrickColor.new("Bright orange")
@@ -484,10 +487,10 @@ addBtn(tabPlayer,210,96,225,"Yak Player",function()
     end
 end)
 
-addBtn(tabPlayer,16,140,175,"Patlat Player",function()
+addBtn(tabPlayer,16,140,185,"Patlat Player",function()
     if not selectedTarget or not selectedTarget.Character then return end
     local root = selectedTarget.Character:FindFirstChild("HumanoidRootPart")
-    for i=1,5 do
+    for i=1,6 do
         if root then
             local boom = Instance.new("Explosion")
             boom.Position = root.Position + Vector3.new(math.random(-2,2), math.random(-1,1), math.random(-2,2))
@@ -496,7 +499,7 @@ addBtn(tabPlayer,16,140,175,"Patlat Player",function()
             boom.ExplosionType = Enum.ExplosionType.Craters
             boom.Parent = Workspace
         end
-        task.wait(0.15)
+        task.wait(0.18)
     end
     local hum = selectedTarget.Character:FindFirstChildWhichIsA("Humanoid")
     if hum then
@@ -504,7 +507,7 @@ addBtn(tabPlayer,16,140,175,"Patlat Player",function()
     end
 end)
 
-addBtn(tabPlayer,210,140,225,"Git Player",function()
+addBtn(tabPlayer,210,140,245,"Git Player",function()
     if not selectedTarget or not selectedTarget.Character or not selectedTarget.Character:FindFirstChild("HumanoidRootPart") then return end
     local myroot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if myroot then
@@ -512,7 +515,7 @@ addBtn(tabPlayer,210,140,225,"Git Player",function()
     end
 end)
 
-addBtn(tabPlayer,16,184,175,"Yanına Çek",function()
+addBtn(tabPlayer,16,184,185,"Yanına Çek",function()
     if not selectedTarget or not selectedTarget.Character or not selectedTarget.Character:FindFirstChild("HumanoidRootPart") then return end
     local myroot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if myroot then
@@ -520,59 +523,64 @@ addBtn(tabPlayer,16,184,175,"Yanına Çek",function()
     end
 end)
 
-addBtn(tabPlayer,210,184,225,"Oyuncuyu Takip Et",function()
+addBtn(tabPlayer,210,184,245,"Oyuncuyu Takip Et",function()
     if not selectedTarget or not selectedTarget.Character or not LocalPlayer.Character then return end
     local myroot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local targetRoot = selectedTarget.Character:FindFirstChild("HumanoidRootPart")
     if myroot and targetRoot then
         local followConn
         followConn = RunService.RenderStepped:Connect(function()
-            if not selectedTarget or not selectedTarget.Character or not selectedTarget.Character:FindFirstChild("HumanoidRootPart") then
-                followConn:Disconnect()
-            elseif (targetRoot.Position-myroot.Position).Magnitude>3 then
-                myroot.CFrame = CFrame.new(targetRoot.Position + Vector3.new(0,3,0))
+            if not selectedTarget or not selectedTarget.Character or not selectedTarget.Character:FindFirstChild("HumanoidRootPart") or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                if followConn then followConn:Disconnect() end
+            else
+                local my = LocalPlayer.Character.HumanoidRootPart
+                local tar = selectedTarget.Character.HumanoidRootPart
+                if (tar.Position - my.Position).Magnitude > 3 then
+                    my.CFrame = CFrame.new(tar.Position + Vector3.new(0,3,0))
+                end
             end
         end)
-        task.wait(2)
-        if followConn then followConn:Disconnect() end
+        task.spawn(function()
+            task.wait(8)
+            if followConn then followConn:Disconnect() end
+        end)
     end
 end)
 
 -- Aimbot Sistemi
-RunService.RenderStepped:Connect(function()
-    if states.aimbot then
-        local closest, dist = nil, math.huge
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChildWhichIsA("Humanoid") and p.Character:FindFirstChildWhichIsA("Humanoid").Health > 0 then
-                local pos,onScr = Camera:WorldToViewportPoint(p.Character.Head.Position)
-                local mag = (Vector2.new(pos.X,pos.Y)-Vector2.new(Mouse.X,Mouse.Y)).Magnitude
-                if mag < dist and onScr and mag <= states.fov then
-                    closest = p
-                    dist = mag
-                end
+local function getClosestPlayerToCursor(fov)
+    local closest, dist = nil, fov or states.fov
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChildWhichIsA("Humanoid") and p.Character:FindFirstChildWhichIsA("Humanoid").Health > 0 then
+            local pos,onScr = Camera:WorldToViewportPoint(p.Character.Head.Position)
+            local mag = (Vector2.new(pos.X,pos.Y)-Vector2.new(Mouse.X,Mouse.Y)).Magnitude
+            if mag < dist and onScr then
+                closest = p
+                dist = mag
             end
         end
-        if closest and closest.Character and closest.Character:FindFirstChild("Head") then
-            Mouse.TargetFilter = closest.Character
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.Head.Position)
+    end
+    return closest
+end
+
+RunService.RenderStepped:Connect(function()
+    if states.aimbot then
+        local target = getClosestPlayerToCursor(states.fov)
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            Mouse.TargetFilter = target.Character
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
         end
     end
 end)
 
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    if states.silentaim and getnamecallmethod and getnamecallmethod()=="FindPartOnRayWithIgnoreList" then
+    if states.silentaim and typeof(getnamecallmethod) == "function" and getnamecallmethod()=="FindPartOnRayWithIgnoreList" then
         local args={...}
-        local target=nil
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                target = p.Character.Head.Position
-                break
-            end
-        end
-        if target then
+        local targetPlr = getClosestPlayerToCursor(states.fov)
+        if targetPlr and targetPlr.Character and targetPlr.Character:FindFirstChild("Head") then
             args[1].Origin=Camera.CFrame.Position
-            args[1].Direction=(target-Camera.CFrame.Position).unit*900
+            args[1].Direction=(targetPlr.Character.Head.Position-Camera.CFrame.Position).unit*900
             return oldNamecall(self, unpack(args))
         end
     end
