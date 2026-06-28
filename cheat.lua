@@ -4,7 +4,6 @@ Yak Player, Patlat Player, Git Player, Yanina Çek, FOV Changer (TAM ÇALIŞIR!)
 NOT: Eğitim/deneme içindir!
 ]]
 
--- Servisler ve Değişkenler
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
@@ -13,87 +12,87 @@ local Camera = Workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
--- Menü Sistemi
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GelistirilmisHileMenu"
 pcall(function() ScreenGui.Parent = game.CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
--- Ana Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 420, 0, 475)
-MainFrame.Position = UDim2.new(0.03,0,0.23,0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(22,22,22)
-MainFrame.BackgroundTransparency = 0.34
+MainFrame.Size = UDim2.new(0, 475, 0, 520)
+MainFrame.Position = UDim2.new(0.5, -238, 0.5, -260)
+MainFrame.BackgroundColor3 = Color3.fromRGB(23, 23, 23)
+MainFrame.BackgroundTransparency = 0.23
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
+MainFrame.ClipsDescendants = true
 
--- Başlık
-local baslik = Instance.new("TextLabel", MainFrame)
-baslik.Size = UDim2.new(1,0,0,38)
-baslik.Position = UDim2.new(0,0,0,0)
-baslik.Text = "ROBLOX HİLE MENÜSÜ (CTRL ile Kapat/Aç)"
-baslik.Font = Enum.Font.SourceSansBold
-baslik.TextSize = 22
-baslik.TextColor3 = Color3.fromRGB(0,247,252)
-baslik.BackgroundTransparency = 1
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,0,0,38)
+Title.Position = UDim2.new(0,0,0,0)
+Title.Text = "ROBLOX HİLE MENÜSÜ (Sağ CTRL ile Aç/Kapat)"
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 22
+Title.TextColor3 = Color3.fromRGB(0,247,252)
+Title.BackgroundTransparency = 1
+Title.Parent = MainFrame
 
--- Sekme (Tab) Sistemi
-local Tabs = {}
-local CurrentTab = nil
 local tabFrame = Instance.new("Frame", MainFrame)
-tabFrame.Size = UDim2.new(1,0,0,34)
+tabFrame.Size = UDim2.new(1,0,0,40)
 tabFrame.Position = UDim2.new(0,0,0,38)
 tabFrame.BackgroundTransparency = 1
 
 local contentFrame = Instance.new("Frame", MainFrame)
-contentFrame.Size = UDim2.new(1,0,1,-72)
-contentFrame.Position = UDim2.new(0,0,0,72)
+contentFrame.Size = UDim2.new(1, 0, 1, -78)
+contentFrame.Position = UDim2.new(0,0,0,78)
 contentFrame.BackgroundTransparency = 1
 
+local Tabs = {}
+local CurrentTab = nil
+
 local function createTab(name)
+    local numTabs = #Tabs
     local tabBtn = Instance.new("TextButton", tabFrame)
-    tabBtn.Size = UDim2.new(0,110,1,0)
-    tabBtn.BackgroundColor3 = Color3.fromRGB(33,33,34)
+    tabBtn.Size = UDim2.new(0.245, -6, 1, -6)
+    tabBtn.Position = UDim2.new(numTabs*0.25 + 0.0125, 0, 0, 3)
+    tabBtn.BackgroundColor3 = Color3.fromRGB(39,39,47)
     tabBtn.Font = Enum.Font.SourceSansBold
     tabBtn.TextSize = 18
     tabBtn.Text = name
     tabBtn.AutoButtonColor = true
-    tabBtn.TextColor3 = Color3.new(0.9,0.9,0.95)
-    local index = #Tabs+1
-    tabBtn.Position = UDim2.new(0, (index-1)*112, 0,0)
+    tabBtn.TextColor3 = Color3.fromRGB(235,235,255)
+    tabBtn.BorderSizePixel = 0
+
     local cFrame = Instance.new("Frame", contentFrame)
     cFrame.Size = UDim2.new(1,0,1,0)
+    cFrame.Position = UDim2.new(0,0,0,0)
     cFrame.BackgroundTransparency = 1
-    cFrame.Visible = false
+    cFrame.Visible = (#Tabs==0)
     table.insert(Tabs, {Button = tabBtn, Frame = cFrame})
+
     tabBtn.MouseButton1Click:Connect(function()
-        for _,tab in ipairs(Tabs) do
-            tab.Frame.Visible = false
-            tab.Button.BackgroundColor3 = Color3.fromRGB(33,33,34)
+        for _, t in ipairs(Tabs) do
+            t.Frame.Visible = false
+            t.Button.BackgroundColor3 = Color3.fromRGB(39,39,47)
         end
         cFrame.Visible = true
-        tabBtn.BackgroundColor3 = Color3.fromRGB(70,105,130)
+        tabBtn.BackgroundColor3 = Color3.fromRGB(70, 105, 130)
         CurrentTab = cFrame
     end)
+    if #Tabs==1 then
+        tabBtn.BackgroundColor3 = Color3.fromRGB(70,105,130)
+        cFrame.Visible = true
+        CurrentTab = cFrame
+    end
     return cFrame
 end
 
--- Sekmeleri Oluştur
 local tabAimbot = createTab("Aimbot/FOV")
-local tabESP    = createTab("Görsel")
+local tabESP    = createTab("ESP/Görsel")
 local tabMisc   = createTab("Misc/Movement")
-local tabPlayer = createTab("Oyuncu İşlemleri")
+local tabPlayer = createTab("Oyuncu Hileleri")
 
--- Varsayılan Tab Açık
-wait()
-Tabs[1].Button.BackgroundColor3 = Color3.fromRGB(70,105,130)
-Tabs[1].Frame.Visible = true
-CurrentTab = Tabs[1].Frame
-
--- Özellikler Durumları
 local states = {
     aimbot = false,
     esp = false,
@@ -105,57 +104,66 @@ local states = {
     silentaim = false,
     fov = 70,
 }
-local flyConn, spinConn, ncConn = nil, nil, nil
+local flyConn, spinConn, noclipConn = nil, nil, nil
+local flySpeed = 70
+local flyKeys = {W=false,S=false,A=false,D=false,Q=false,E=false}
+local invisibleConn = nil
 
--- Buton ve Slider Yardımcısı
-local function addBtn(tab, ypos, textgen, callback)
+local function addBtn(tab, xpos, ypos, width, textFN, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,185,0,30)
-    btn.Position = UDim2.new(0,18,0,ypos)
+    btn.Size = UDim2.new(0, width or 185, 0, 30)
+    btn.Position = UDim2.new(0, xpos or 18, 0, ypos)
     btn.BackgroundColor3 = Color3.fromRGB(48,49,55)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 17
-    btn.Text = type(textgen)=="function" and textgen() or (textgen or "Button")
+    if typeof(textFN)=="function" then 
+        btn.Text = textFN() 
+    else 
+        btn.Text = textFN or "Buton"
+    end
     btn.Parent = tab
+    btn.BorderSizePixel = 0
     btn.MouseButton1Click:Connect(function()
         callback(btn)
-        if type(textgen)=="function" then
-            btn.Text = textgen()
+        if typeof(textFN)=="function" then
+            btn.Text = textFN()
         end
     end)
     return btn
 end
 
-local function addLabel(tab, ypos, text)
+local function addLabel(tab, xpos, ypos, width, text)
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0,185,0,24)
-    lbl.Position = UDim2.new(0,18,0,ypos)
+    lbl.Size = UDim2.new(0, width or 200, 0, 24)
+    lbl.Position = UDim2.new(0, xpos or 18, 0, ypos)
     lbl.BackgroundTransparency = 1
     lbl.TextColor3 = Color3.fromRGB(96,212,247)
     lbl.Font = Enum.Font.SourceSansItalic
-    lbl.TextSize = 17
+    lbl.TextSize = 16
     lbl.Text = text
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = tab
     return lbl
 end
 
--- Aim & FOV Sekmesi
-addLabel(tabAimbot,0,"Aimbot Özelliği")
-addBtn(tabAimbot,28,function() return "Aimbot [" .. (states.aimbot and "Açık" or "Kapalı") .. "]" end, function()
+-- Aimbot/FOV TAB
+addLabel(tabAimbot,12,8,200,"Aimbot (FOV İçinde Otomatik Hedef)")
+addBtn(tabAimbot,16,36,190,function() return "Aimbot ["..(states.aimbot and "Açık" or "Kapalı").."]" end,function()
     states.aimbot = not states.aimbot
 end)
 
-addLabel(tabAimbot,70,"FOV Ayarı (30-150)")
+addLabel(tabAimbot,12,76,200,"FOV Ayarı (30-150)")
 local fovBox = Instance.new("TextBox", tabAimbot)
-fovBox.Size = UDim2.new(0,85,0,28)
-fovBox.Position = UDim2.new(0,18,0,92)
+fovBox.Size = UDim2.new(0,100,0,28)
+fovBox.Position = UDim2.new(0,16,0,98)
 fovBox.BackgroundColor3 = Color3.fromRGB(34,104,84)
 fovBox.TextColor3 = Color3.fromRGB(0,255,127)
 fovBox.TextSize = 16
 fovBox.Font = Enum.Font.SourceSansBold
 fovBox.Text = tostring(states.fov)
 fovBox.ClearTextOnFocus = false
+fovBox.Parent = tabAimbot
 fovBox.FocusLost:Connect(function()
     local val = tonumber(fovBox.Text:match("%d+"))
     if val and val>=30 and val<=150 then
@@ -167,304 +175,372 @@ fovBox.FocusLost:Connect(function()
 end)
 Camera.FieldOfView = states.fov
 
--- Görsel Sekmesi (ESP ve benzeri)
-addLabel(tabESP,0,"ESP (Oyuncuları Etiketle)")
-addBtn(tabESP,28,function() return "ESP [".. (states.esp and "Açık" or "Kapalı") .. "]" end, function()
+-- ESP/Görsel TAB
+addLabel(tabESP,12,8,205,"ESP (Oyuncuları Etiketle)")
+addBtn(tabESP,16,36,210,function() return "ESP ["..(states.esp and "Açık" or "Kapalı").."]" end,function()
     states.esp = not states.esp
     for _,p in pairs(Players:GetPlayers()) do
-        local remove = function()
-            if p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESPLabel") then
-                p.Character.Head.ESPLabel:Destroy()
-            end
-        end
-        if states.esp then
-            if p~=LocalPlayer then
-                -- Eklediğimizde
-                if not (p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESPLabel")) then
+        if p ~= LocalPlayer then
+            if states.esp then
+                if p.Character and p.Character:FindFirstChild("Head") and not p.Character.Head:FindFirstChild("ESPLabel") then
                     local b = Instance.new("BillboardGui")
-                    b.AlwaysOnTop=true b.Size=UDim2.new(0,100,0,30) b.Name="ESPLabel"
+                    b.AlwaysOnTop = true 
+                    b.Size = UDim2.new(0,100,0,30) 
+                    b.Name = "ESPLabel"
                     local t = Instance.new("TextLabel",b)
                     t.Size=UDim2.new(1,0,1,0)
                     t.BackgroundTransparency=1
                     t.Font=Enum.Font.SourceSansBold
-                    t.TextColor3=Color3.new(1,0,0) t.TextScaled=true t.Text=p.Name
-                    if p.Character and p.Character:FindFirstChild("Head") then
-                        b.Parent=p.Character.Head
-                    end
+                    t.TextColor3=Color3.new(1,0,0)
+                    t.TextScaled=true
+                    t.Text=p.Name
+                    b.Parent=p.Character.Head
+                end
+            else
+                if p.Character and p.Character:FindFirstChild("Head") then
+                    local label = p.Character.Head:FindFirstChild("ESPLabel")
+                    if label then label:Destroy() end
                 end
             end
-        else
-            remove()
         end
     end
 end)
 
-Players.PlayerAdded:Connect(function(p)
-    if states.esp then
-        repeat wait() until p.Character and p.Character:FindFirstChild("Head")
+Players.PlayerAdded:Connect(function(pl)
+    if not states.esp then return end
+    pl.CharacterAdded:Connect(function(char)
+        repeat wait() until char:FindFirstChild("Head")
         local b = Instance.new("BillboardGui")
-        b.AlwaysOnTop=true b.Size=UDim2.new(0,100,0,30) b.Name="ESPLabel"
+        b.AlwaysOnTop = true 
+        b.Size = UDim2.new(0,100,0,30) 
+        b.Name = "ESPLabel"
         local t = Instance.new("TextLabel",b)
         t.Size=UDim2.new(1,0,1,0)
         t.BackgroundTransparency=1
         t.Font=Enum.Font.SourceSansBold
-        t.TextColor3=Color3.new(1,0,0) t.TextScaled=true t.Text=p.Name
-        b.Parent=p.Character.Head
-    end
+        t.TextColor3=Color3.new(1,0,0)
+        t.TextScaled=true
+        t.Text=pl.Name
+        b.Parent=char.Head
+    end)
 end)
 
-addLabel(tabESP,70,"SilentAim (Tetik, Gizli Aimbot)")
-addBtn(tabESP,100,function() return "SilentAim ["..(states.silentaim and "Açık" or "Kapalı").."]" end, function()
+addLabel(tabESP,12,80,215,"SilentAim (Tetik, Gizli Aimbot)")
+addBtn(tabESP,16,108,210,function() return "SilentAim ["..(states.silentaim and "Açık" or "Kapalı").."]" end,function()
     states.silentaim = not states.silentaim
 end)
 
--- Misc/Movement Sekmesi
-addLabel(tabMisc,0,"Spinbot (Sürekli Döndürür)")
-addBtn(tabMisc,28,function() return "Spinbot [".. (states.spinbot and "Açık" or "Kapalı") .. "]" end, function()
+-- Movement/Misc TAB
+addLabel(tabMisc,12,12,240,"Spinbot (Karakterini Döndürür)")
+addBtn(tabMisc,16,38,145,function() return "Spinbot ["..(states.spinbot and "Açık" or "Kapalı").."]" end,function()
     states.spinbot = not states.spinbot
     if states.spinbot and not spinConn then
         spinConn = RunService.RenderStepped:Connect(function()
             if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame *= CFrame.Angles(0,math.rad(24),0)
+                LocalPlayer.Character.HumanoidRootPart.CFrame *= CFrame.Angles(0,math.rad(17),0)
             end
         end)
     elseif spinConn then
         spinConn:Disconnect()
-        spinConn=nil
+        spinConn = nil
     end
 end)
 
-addLabel(tabMisc,70,"Fly (Uçar)")
-addBtn(tabMisc,98,function() return "Fly [".. (states.fly and "Açık" or "Kapalı") .. "]" end, function()
+addLabel(tabMisc,190,12,90,"Fly (Uçar)")
+addBtn(tabMisc,200,38,95,function() return "Fly ["..(states.fly and "Açık" or "Kapalı").."]" end,function()
     states.fly = not states.fly
-    if states.fly then
+    if states.fly and not flyConn then
+        local hrp = nil
+        local flyBodyVel = nil
         flyConn = RunService.RenderStepped:Connect(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.Velocity = Camera.CFrame.LookVector*70
+            LocalPlayer = Players.LocalPlayer
+            hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                if not flyBodyVel or not flyBodyVel.Parent then
+                    flyBodyVel = Instance.new("BodyVelocity", hrp)
+                    flyBodyVel.MaxForce = Vector3.new(1,1,1) * 1e5
+                    flyBodyVel.Velocity = Vector3.zero
+                end
+                local move = Vector3.zero
+                if flyKeys.W then move = move + Camera.CFrame.LookVector end
+                if flyKeys.S then move = move - Camera.CFrame.LookVector end
+                if flyKeys.A then move = move - Camera.CFrame.RightVector end
+                if flyKeys.D then move = move + Camera.CFrame.RightVector end
+                if flyKeys.E then move = move + Camera.CFrame.UpVector end
+                if flyKeys.Q then move = move - Camera.CFrame.UpVector end
+                if move.Magnitude > 0 then
+                    flyBodyVel.Velocity = move.Unit * flySpeed
+                else
+                    flyBodyVel.Velocity = Vector3.zero
+                end
             end
         end)
-    else
-        if flyConn then flyConn:Disconnect() flyConn=nil end
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+        UserInputService.InputBegan:Connect(function(i, g)
+            if g then return end
+            if i.KeyCode == Enum.KeyCode.W then flyKeys.W=true end
+            if i.KeyCode == Enum.KeyCode.S then flyKeys.S=true end
+            if i.KeyCode == Enum.KeyCode.A then flyKeys.A=true end
+            if i.KeyCode == Enum.KeyCode.D then flyKeys.D=true end
+            if i.KeyCode == Enum.KeyCode.E then flyKeys.E=true end
+            if i.KeyCode == Enum.KeyCode.Q then flyKeys.Q=true end
+        end)
+        UserInputService.InputEnded:Connect(function(i, g)
+            if g then return end
+            if i.KeyCode == Enum.KeyCode.W then flyKeys.W=false end
+            if i.KeyCode == Enum.KeyCode.S then flyKeys.S=false end
+            if i.KeyCode == Enum.KeyCode.A then flyKeys.A=false end
+            if i.KeyCode == Enum.KeyCode.D then flyKeys.D=false end
+            if i.KeyCode == Enum.KeyCode.E then flyKeys.E=false end
+            if i.KeyCode == Enum.KeyCode.Q then flyKeys.Q=false end
+        end)
+    elseif flyConn then
+        flyConn:Disconnect()
+        flyConn = nil
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and hrp:FindFirstChildOfClass("BodyVelocity") then
+            hrp:FindFirstChildOfClass("BodyVelocity"):Destroy()
         end
     end
 end)
 
-addLabel(tabMisc,142,"Noclip (Duvar içinden geç)")
-addBtn(tabMisc,172,function() return "Noclip [" .. (states.noclip and "Açık" or "Kapalı") .. "]" end,function()
+addLabel(tabMisc,12,85,"Noclip (Duvarlardan Geç)")
+addBtn(tabMisc,16,112,145,function() return "Noclip ["..(states.noclip and "Açık" or "Kapalı").."]" end,function()
     states.noclip = not states.noclip
-    if states.noclip then
-        ncConn=RunService.Stepped:Connect(function()
+    if states.noclip and not noclipConn then
+        noclipConn = RunService.Stepped:Connect(function()
             if LocalPlayer.Character then
-                for _,p in ipairs(LocalPlayer.Character:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        p.CanCollide=false
+                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
                     end
                 end
             end
         end)
-    elseif ncConn then
-        ncConn:Disconnect()
-        ncConn=nil
+    elseif not states.noclip and noclipConn then
+        noclipConn:Disconnect()
+        noclipConn = nil
         if LocalPlayer.Character then
-            for _,p in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if p:IsA("BasePart") then
-                    p.CanCollide=true
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
                 end
             end
         end
     end
 end)
 
-addLabel(tabMisc,216,"Invisible (Görünmez Yap)")
-addBtn(tabMisc,246,function() return "Invisible ["..(states.invisible and "Açık" or "Kapalı").."]" end,function()
-    states.invisible=not states.invisible
-    if LocalPlayer.Character then
-        for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") or v:IsA("Decal") then
-                v.Transparency = (states.invisible and 1 or 0)
+addLabel(tabMisc,190,85,"Invisible (Görünmez)")
+addBtn(tabMisc,200,112,95,function() return "Invisible ["..(states.invisible and "Açık" or "Kapalı").."]" end,function()
+    states.invisible = not states.invisible
+    if invisibleConn then
+        invisibleConn:Disconnect()
+        invisibleConn = nil
+    end
+    local function setInvis(char, invis)
+        for _,v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") or v:IsA("Decal") or v:IsA("MeshPart") then
+                v.LocalTransparencyModifier = invis and 1 or 0
+                if v:IsA("BasePart") then
+                    v.Transparency = invis and 1 or 0
+                end
             end
         end
     end
+    local char = LocalPlayer.Character
+    if char then setInvis(char, states.invisible) end
+    invisibleConn = LocalPlayer.CharacterAdded:Connect(function(c)
+        wait(0.3)
+        setInvis(c, states.invisible)
+    end)
 end)
 
-addLabel(tabMisc,288,"Godmode (Ölümsüzlük)")
-addBtn(tabMisc,318,function() return "Godmode ["..(states.godmode and "Açık" or "Kapalı").."]" end,function()
+addLabel(tabMisc,12,170,"Godmode (Ölümsüzlük Ver)")
+addBtn(tabMisc,16,196,145,function() return "Godmode ["..(states.godmode and "Açık" or "Kapalı").."]" end,function()
     states.godmode = not states.godmode
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid") then
-        local hum = LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+    if hum then
         hum.MaxHealth = (states.godmode and math.huge or 100)
         hum.Health = hum.MaxHealth
+        hum:GetPropertyChangedSignal("Health"):Connect(function()
+            if states.godmode and hum.Health < hum.MaxHealth - 10 then
+                hum.MaxHealth = math.huge
+                hum.Health = math.huge
+            end
+        end)
     end
 end)
 
--- Oyuncu Seçici Dropdown
+-- Oyuncu Dropdown
 local selectedTarget = nil
 local function updateDropdown(dropdown)
-    local text = "Hedef Oyuncu: " .. (selectedTarget and selectedTarget.Name or "Seçilmedi")
-    dropdown.Text = text
+    local t = "Hedef: " .. (selectedTarget and selectedTarget.Name or "Seçilmedi")
+    dropdown.Text = t
 end
 
-local function makePlayerDropdown(tab,ypos)
-    local dd = Instance.new("TextButton",tab)
-    dd.Size = UDim2.new(0,185,0,28)
-    dd.Position = UDim2.new(0,215,0,ypos)
-    dd.TextColor3 = Color3.new(1,1,1)
-    dd.BackgroundColor3 = Color3.fromRGB(45,51,57)
-    dd.Font = Enum.Font.SourceSans
-    dd.TextSize = 16
-    updateDropdown(dd)
-
-    dd.MouseButton1Click:Connect(function()
+local function makePlayerDropdown(tab, xpos, ypos)
+    local ddBtn = Instance.new("TextButton", tab)
+    ddBtn.Size = UDim2.new(0,220,0,30)
+    ddBtn.Position = UDim2.new(0, xpos or 16,0,ypos)
+    ddBtn.BackgroundColor3 = Color3.fromRGB(44,49,66)
+    ddBtn.TextColor3 = Color3.fromRGB(230,230,230)
+    ddBtn.Font = Enum.Font.SourceSansBold
+    ddBtn.TextSize = 17
+    ddBtn.TextXAlignment = Enum.TextXAlignment.Left
+    updateDropdown(ddBtn)
+    ddBtn.BorderSizePixel = 0
+    ddBtn.MouseButton1Click:Connect(function()
         local popup = Instance.new("Frame",ScreenGui)
-        popup.Size = UDim2.new(0,160,0,22*#Players:GetPlayers())
-        popup.Position = UDim2.new(0,MainFrame.Position.X.Offset+420,0,MainFrame.Position.Y.Offset+88)
-        popup.BackgroundColor3 = Color3.fromRGB(30,30,30)
-        popup.BorderSizePixel=2
+        popup.Size = UDim2.new(0,180,0,30*#Players:GetPlayers())
+        popup.Position = UDim2.new(0, MainFrame.AbsolutePosition.X+MainFrame.Size.X.Offset+15, 0, MainFrame.AbsolutePosition.Y+68)
+        popup.BackgroundColor3 = Color3.fromRGB(31,31,38)
+        popup.BorderSizePixel = 2
+        popup.ZIndex = 300
         popup.Active = true
-        for i,plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer then
-                local pBtn = Instance.new("TextButton",popup)
-                pBtn.Size = UDim2.new(1,0,0,22)
-                pBtn.Position = UDim2.new(0,0,0,22*(i-1))
-                pBtn.Text = plr.Name
+        popup.ClipsDescendants = true
+        local list = Instance.new("UIListLayout", popup)
+        list.FillDirection = Enum.FillDirection.Vertical
+        list.SortOrder = Enum.SortOrder.LayoutOrder
+        for _,plr in ipairs(Players:GetPlayers()) do
+            if plr~=LocalPlayer then
+                local pBtn = Instance.new("TextButton", popup)
+                pBtn.Size = UDim2.new(1,0,0,30)
                 pBtn.BackgroundColor3 = Color3.fromRGB(46,46,54)
                 pBtn.Font = Enum.Font.SourceSans
                 pBtn.TextColor3 = Color3.new(1,1,1)
-                pBtn.TextSize=14
-                pBtn.AutoButtonColor=true
+                pBtn.TextSize=15
+                pBtn.Text = plr.Name
+                pBtn.BorderSizePixel = 0
+                pBtn.ZIndex=301
                 pBtn.MouseButton1Click:Connect(function()
                     selectedTarget = plr
-                    updateDropdown(dd)
+                    updateDropdown(ddBtn)
                     popup:Destroy()
                 end)
             end
         end
-        -- Oto kapat
-        local conn
-        conn = UserInputService.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 and not popup:IsAncestorOf(game:GetService("Players").LocalPlayer:GetMouse().Target) then
-                if popup then popup:Destroy() end
-                if conn then conn:Disconnect() end
+        local function clickCheck(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local mouse = UserInputService:GetMouseLocation()
+                if not (mouse.X > popup.AbsolutePosition.X and mouse.X < popup.AbsolutePosition.X + popup.AbsoluteSize.X and mouse.Y > popup.AbsolutePosition.Y and mouse.Y < popup.AbsolutePosition.Y + popup.AbsoluteSize.Y) then
+                    popup:Destroy()
+                    UserInputService.InputBegan:Disconnect(clickCheck)
+                end
             end
-        end)
+        end
+        UserInputService.InputBegan:Connect(clickCheck)
     end)
-    return dd
+    return ddBtn
 end
 
--- PLAYER HILELERI
-addLabel(tabPlayer,2,"Özel Oyuncu Hileleri")
-local playerDropdown = makePlayerDropdown(tabPlayer,28)
-
--- Araba Fırlat
-addBtn(tabPlayer,66,"Araba Fırlat",function()
+-- Oyuncu Hileleri TAB
+addLabel(tabPlayer,12,4,200,"Özel Oyuncu Hileleri")
+local playerDropdown = makePlayerDropdown(tabPlayer, 14, 32)
+addBtn(tabPlayer,16,72,160,"Araba Fırlat",function()
     for _,v in ipairs(Workspace:GetChildren()) do
-        if v:IsA("Model") and v:FindFirstChild("VehicleSeat") then
-            v:PivotTo(CFrame.new(v:GetPivot().Position,v:GetPivot().Position+Camera.CFrame.LookVector))
-            local main = v.PrimaryPart or v:FindFirstChild("VehicleSeat")
+        if v:IsA("Model") and v:FindFirstChildWhichIsA("VehicleSeat") then
+            local pos = v:GetPivot().Position
+            v:PivotTo(CFrame.new(pos, pos + Camera.CFrame.LookVector))
+            local main = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
             if main then
-                main.Velocity = Camera.CFrame.LookVector*150+Vector3.new(0,30,0)
+                main.Velocity = Camera.CFrame.LookVector*150 + Vector3.new(0,40,0)
             end
         end
     end
 end)
-
--- Yak Player
-addBtn(tabPlayer,106,"Yak Player",function()
+addBtn(tabPlayer,192,72,180,"Yak Player",function()
     if not selectedTarget or not selectedTarget.Character then return end
     for _,v in ipairs(selectedTarget.Character:GetDescendants()) do
         if v:IsA("BasePart") then
-            v.BrickColor=BrickColor.new("Bright orange")
+            v.BrickColor = BrickColor.new("Bright orange")
             if not v:FindFirstChildOfClass("Fire") then
-                local f=Instance.new("Fire",v)
-                f.Size=8
-                f.Heat=25
+                local f = Instance.new("Fire", v)
+                f.Size = 10
+                f.Heat = 34
             end
         end
     end
-    local hum=selectedTarget.Character:FindFirstChildWhichIsA("Humanoid")
-    if hum then hum.Health=0 end
+    local hum = selectedTarget.Character:FindFirstChildWhichIsA("Humanoid")
+    if hum then
+        hum:TakeDamage(hum.Health*0.99 + 2)
+    end
 end)
-
--- Patlat Player
-addBtn(tabPlayer,146,"Patlat Player",function()
+addBtn(tabPlayer,16,116,160,"Patlat Player",function()
     if not selectedTarget or not selectedTarget.Character then return end
-    for i=1,5 do
-        local root=selectedTarget.Character:FindFirstChild("HumanoidRootPart")
+    local root = selectedTarget.Character:FindFirstChild("HumanoidRootPart")
+    for i=1,4 do
         if root then
-            local boom=Instance.new("Explosion",Workspace)
-            boom.Position=root.Position
-            boom.BlastRadius=7
-            boom.BlastPressure=999999
-            boom.ExplosionType=Enum.ExplosionType.Craters
+            local boom = Instance.new("Explosion")
+            boom.Position = root.Position + Vector3.new(math.random(-1,1), math.random(-1,1), math.random(-1,1)) * 2
+            boom.BlastRadius = 7
+            boom.BlastPressure = 999999
+            boom.ExplosionType = Enum.ExplosionType.Craters
+            boom.Parent = Workspace
         end
-        wait(0.06)
+        wait(0.1)
     end
-    local hum=selectedTarget.Character:FindFirstChildWhichIsA("Humanoid")
-    if hum then hum.Health=0 end
+    local hum = selectedTarget.Character:FindFirstChildWhichIsA("Humanoid")
+    if hum then
+        hum:TakeDamage(hum.Health)
+    end
 end)
-
--- Git Player (kendini seçili oyuncuya ışınla)
-addBtn(tabPlayer,186,"Git Player",function()
+addBtn(tabPlayer,192,116,180,"Git Player",function()
     if not selectedTarget or not selectedTarget.Character or not selectedTarget.Character:FindFirstChild("HumanoidRootPart") then return end
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.CFrame=selectedTarget.Character.HumanoidRootPart.CFrame+Vector3.new(0,2,0)
+    local myroot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if myroot then
+        myroot.CFrame = selectedTarget.Character.HumanoidRootPart.CFrame + Vector3.new(0,2,0)
     end
 end)
-
--- Yanina Çek (seçili oyuncuyu yanına çek)
-addBtn(tabPlayer,226,"Yanina Çek",function()
+addBtn(tabPlayer,16,160,160,"Yanına Çek",function()
     if not selectedTarget or not selectedTarget.Character or not selectedTarget.Character:FindFirstChild("HumanoidRootPart") then return end
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        selectedTarget.Character.HumanoidRootPart.CFrame=LocalPlayer.Character.HumanoidRootPart.CFrame+Vector3.new(0,2,0)
+    local myroot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if myroot then
+        selectedTarget.Character.HumanoidRootPart.CFrame = myroot.CFrame + Vector3.new(0,2,0)
     end
 end)
 
--- Aimbot Sistemi (FOV dahil)
+-- Aimbot Sistemi
 RunService.RenderStepped:Connect(function()
     if states.aimbot then
         local closest, dist = nil, math.huge
-        for _,p in pairs(Players:GetPlayers()) do
-            if p~=LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChildWhichIsA("Humanoid") and p.Character:FindFirstChildWhichIsA("Humanoid").Health > 0 then
                 local pos,onScr = Camera:WorldToViewportPoint(p.Character.Head.Position)
-                local mag = (Vector2.new(pos.X,pos.Y)-Vector2.new(Mouse.X,Mouse.Y)).magnitude
-                if mag<dist and onScr and mag<states.fov then closest=p dist=mag end
+                local mag = (Vector2.new(pos.X,pos.Y)-Vector2.new(Mouse.X,Mouse.Y)).Magnitude
+                if mag < dist and onScr and mag <= states.fov then
+                    closest = p
+                    dist = mag
+                end
             end
         end
         if closest and closest.Character and closest.Character:FindFirstChild("Head") then
-            Mouse.TargetFilter=closest.Character
-            Camera.CFrame=CFrame.new(Camera.CFrame.Position,closest.Character.Head.Position)
+            Mouse.TargetFilter = closest.Character
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.Head.Position)
         end
     end
 end)
 
--- SilentAim Hooklama
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     if states.silentaim and getnamecallmethod and getnamecallmethod()=="FindPartOnRayWithIgnoreList" then
         local args={...}
         local target=nil
-        for _,p in pairs(Players:GetPlayers()) do
-            if p~=LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
                 target = p.Character.Head.Position
                 break
             end
         end
         if target then
             args[1].Origin=Camera.CFrame.Position
-            args[1].Direction=(target-Camera.CFrame.Position).unit*500
+            args[1].Direction=(target-Camera.CFrame.Position).unit*900
             return oldNamecall(self, unpack(args))
         end
     end
     return oldNamecall(self, ...)
 end)
 
--- Kısayolla Menü Aç/Kapat
 UserInputService.InputBegan:Connect(function(input,gp)
-    if input.KeyCode==Enum.KeyCode.RightControl then
+    if input.KeyCode==Enum.KeyCode.RightControl and not gp then
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-
--- End
