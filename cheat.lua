@@ -36,9 +36,10 @@ local GodModeEnabled = false
 local NoClipEnabled = false
 local SelectedPlayer = nil
 local CurrentSkin = "Default"
+local MenuVisible = true
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AnticheatTestSuite"
+ScreenGui.Name = "sarabazaki.lua"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -50,8 +51,6 @@ MainFrame.Position = UDim2.new(0.5, -375, 0.5, -260)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
-MainFrame.Active = true
-MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -75,7 +74,7 @@ TitleLabel.Name = "Title"
 TitleLabel.Size = UDim2.new(0, 400, 1, 0)
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "ANTICHEAT TEST SUITE"
+TitleLabel.Text = "sarabazaki.lua"
 TitleLabel.TextColor3 = MenuColor
 TitleLabel.TextSize = 20
 TitleLabel.Font = Enum.Font.GothamBold
@@ -1478,7 +1477,8 @@ SwitchTab("Settings")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.N then
-        MainFrame.Visible = not MainFrame.Visible
+        MenuVisible = not MenuVisible
+        MainFrame.Visible = MenuVisible
     end
 end)
 
