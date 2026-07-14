@@ -34,6 +34,7 @@ local FlyEnabled = false
 local FlySpeed = 50
 local GodModeEnabled = false
 local NoClipEnabled = false
+local SpinBotEnabled = false
 local SelectedPlayer = nil
 local CurrentSkin = "Default"
 local MenuVisible = true
@@ -903,6 +904,10 @@ CreateToggle(MovementContent, "NoClip", function(state)
     NoClipEnabled = state
 end)
 
+CreateToggle(MovementContent, "Spin Bot", function(state)
+    SpinBotEnabled = state
+end)
+
 local FlyConnection
 FlyConnection = RunService.RenderStepped:Connect(function()
     if not FlyEnabled then return end
@@ -948,6 +953,16 @@ RunService.Stepped:Connect(function()
             part.CanCollide = false
         end
     end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not SpinBotEnabled then return end
+    local character = LocalPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(20), 0)
 end)
 
 local TeleportSection, TeleportContent = CreateSection(TeleportTab, "Player Teleport")
