@@ -19,8 +19,8 @@ ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 700, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 750, 0, 520)
+MainFrame.Position = UDim2.new(0.5, -375, 0.5, -260)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -35,6 +35,7 @@ TopBar.Name = "TopBar"
 TopBar.Size = UDim2.new(1, 0, 0, 50)
 TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 TopBar.BorderSizePixel = 0
+TopBar.ZIndex = 100
 TopBar.Parent = MainFrame
 
 local TopBarCorner = Instance.new("UICorner")
@@ -51,6 +52,7 @@ TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
 TitleLabel.TextSize = 20
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.ZIndex = 101
 TitleLabel.Parent = TopBar
 
 local CloseButton = Instance.new("TextButton")
@@ -62,6 +64,7 @@ CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.TextSize = 16
 CloseButton.Font = Enum.Font.GothamBold
+CloseButton.ZIndex = 101
 CloseButton.Parent = TopBar
 
 local CloseCorner = Instance.new("UICorner")
@@ -74,10 +77,11 @@ end)
 
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.new(0, 180, 1, -50)
+Sidebar.Size = UDim2.new(0, 200, 1, -50)
 Sidebar.Position = UDim2.new(0, 0, 0, 50)
 Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 Sidebar.BorderSizePixel = 0
+Sidebar.ZIndex = 50
 Sidebar.Parent = MainFrame
 
 local SidebarCorner = Instance.new("UICorner")
@@ -86,9 +90,10 @@ SidebarCorner.Parent = Sidebar
 
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "Content"
-ContentFrame.Size = UDim2.new(1, -180, 1, -50)
-ContentFrame.Position = UDim2.new(0, 180, 0, 50)
+ContentFrame.Size = UDim2.new(1, -200, 1, -50)
+ContentFrame.Position = UDim2.new(0, 200, 0, 50)
 ContentFrame.BackgroundTransparency = 1
+ContentFrame.ZIndex = 1
 ContentFrame.Parent = MainFrame
 
 local TabButtons = {}
@@ -105,6 +110,7 @@ local function CreateTabButton(name, icon, order)
     Button.TextSize = 14
     Button.Font = Enum.Font.Gotham
     Button.TextXAlignment = Enum.TextXAlignment.Left
+    Button.ZIndex = 51
     Button.Parent = Sidebar
     
     local ButtonCorner = Instance.new("UICorner")
@@ -122,8 +128,9 @@ local function CreateTabContent(name)
     Frame.BackgroundTransparency = 1
     Frame.ScrollBarThickness = 4
     Frame.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
-    Frame.CanvasSize = UDim2.new(0, 0, 0, 600)
+    Frame.CanvasSize = UDim2.new(0, 0, 0, 800)
     Frame.Visible = false
+    Frame.ZIndex = 2
     Frame.Parent = ContentFrame
     
     local ListLayout = Instance.new("UIListLayout")
@@ -139,7 +146,7 @@ local function SwitchTab(tabName)
     end
     for name, button in pairs(TabButtons) do
         if name == tabName then
-            button.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+            button.BackgroundColor3 = MenuColor
             button.TextColor3 = Color3.fromRGB(255, 255, 255)
         else
             button.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -150,8 +157,10 @@ end
 
 local PlayerInfoFrame = Instance.new("Frame")
 PlayerInfoFrame.Name = "PlayerInfo"
-PlayerInfoFrame.Size = UDim2.new(1, -20, 0, 80)
+PlayerInfoFrame.Size = UDim2.new(1, -20, 0, 100)
+PlayerInfoFrame.Position = UDim2.new(0, 10, 0, 10)
 PlayerInfoFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+PlayerInfoFrame.ZIndex = 52
 PlayerInfoFrame.Parent = Sidebar
 
 local PlayerInfoCorner = Instance.new("UICorner")
@@ -160,43 +169,58 @@ PlayerInfoCorner.Parent = PlayerInfoFrame
 
 local AvatarImage = Instance.new("ImageLabel")
 AvatarImage.Name = "Avatar"
-AvatarImage.Size = UDim2.new(0, 50, 0, 50)
-AvatarImage.Position = UDim2.new(0, 10, 0, 15)
+AvatarImage.Size = UDim2.new(0, 60, 0, 60)
+AvatarImage.Position = UDim2.new(0, 10, 0, 20)
 AvatarImage.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-AvatarImage.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=150&height=150&format=png"
+AvatarImage.Image = ""
+AvatarImage.ZIndex = 53
 AvatarImage.Parent = PlayerInfoFrame
 
+spawn(function()
+    local success, result = pcall(function()
+        return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. LocalPlayer.UserId .. "&size=150x150&format=Png&isCircular=true")
+    end)
+    if success then
+        local data = HttpService:JSONDecode(result)
+        if data and data.data and data.data[1] then
+            AvatarImage.Image = data.data[1].imageUrl
+        end
+    end
+end)
+
 local AvatarCorner = Instance.new("UICorner")
-AvatarCorner.CornerRadius = UDim.new(0, 25)
+AvatarCorner.CornerRadius = UDim.new(0, 30)
 AvatarCorner.Parent = AvatarImage
 
 local PlayerNameLabel = Instance.new("TextLabel")
 PlayerNameLabel.Name = "PlayerName"
 PlayerNameLabel.Size = UDim2.new(0, 110, 0, 20)
-PlayerNameLabel.Position = UDim2.new(0, 70, 0, 15)
+PlayerNameLabel.Position = UDim2.new(0, 80, 0, 20)
 PlayerNameLabel.BackgroundTransparency = 1
 PlayerNameLabel.Text = LocalPlayer.Name
 PlayerNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlayerNameLabel.TextSize = 14
 PlayerNameLabel.Font = Enum.Font.GothamBold
 PlayerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+PlayerNameLabel.ZIndex = 53
 PlayerNameLabel.Parent = PlayerInfoFrame
 
 local PlayTimeLabel = Instance.new("TextLabel")
 PlayTimeLabel.Name = "PlayTime"
 PlayTimeLabel.Size = UDim2.new(0, 110, 0, 20)
-PlayTimeLabel.Position = UDim2.new(0, 70, 0, 40)
+PlayTimeLabel.Position = UDim2.new(0, 80, 0, 42)
 PlayTimeLabel.BackgroundTransparency = 1
 PlayTimeLabel.Text = "00:00:00"
 PlayTimeLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
 PlayTimeLabel.TextSize = 12
 PlayTimeLabel.Font = Enum.Font.Gotham
 PlayTimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+PlayTimeLabel.ZIndex = 53
 PlayTimeLabel.Parent = PlayerInfoFrame
 
 spawn(function()
     local startTime = tick()
-    while true do
+    while ScreenGui and ScreenGui.Parent do
         wait(1)
         local elapsed = tick() - startTime
         local hours = math.floor(elapsed / 3600)
@@ -209,13 +233,14 @@ end)
 local CharacterNameLabel = Instance.new("TextLabel")
 CharacterNameLabel.Name = "CharacterName"
 CharacterNameLabel.Size = UDim2.new(0, 110, 0, 15)
-CharacterNameLabel.Position = UDim2.new(0, 70, 0, 58)
+CharacterNameLabel.Position = UDim2.new(0, 80, 0, 62)
 CharacterNameLabel.BackgroundTransparency = 1
 CharacterNameLabel.Text = "Character: Loading..."
 CharacterNameLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 CharacterNameLabel.TextSize = 10
 CharacterNameLabel.Font = Enum.Font.Gotham
 CharacterNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+CharacterNameLabel.ZIndex = 53
 CharacterNameLabel.Parent = PlayerInfoFrame
 
 LocalPlayer.CharacterAdded:Connect(function(char)
@@ -227,6 +252,8 @@ if LocalPlayer.Character then
     CharacterNameLabel.Text = "Character: " .. LocalPlayer.Character.Name
 end
 
+local TabStartY = 120
+
 local SettingsTab = CreateTabContent("Settings")
 local ESPTab = CreateTabContent("ESP")
 local AimbotTab = CreateTabContent("Aimbot")
@@ -236,12 +263,25 @@ local VisualsTab = CreateTabContent("Visuals")
 local CharacterTab = CreateTabContent("Character")
 
 TabButtons["Settings"] = CreateTabButton("Settings", "⚙", 0)
+TabButtons["Settings"].Position = UDim2.new(0, 10, 0, TabStartY + (0 * 50))
+
 TabButtons["ESP"] = CreateTabButton("ESP", "👁", 1)
+TabButtons["ESP"].Position = UDim2.new(0, 10, 0, TabStartY + (1 * 50))
+
 TabButtons["Aimbot"] = CreateTabButton("Aimbot", "🎯", 2)
+TabButtons["Aimbot"].Position = UDim2.new(0, 10, 0, TabStartY + (2 * 50))
+
 TabButtons["Movement"] = CreateTabButton("Movement", "✈", 3)
+TabButtons["Movement"].Position = UDim2.new(0, 10, 0, TabStartY + (3 * 50))
+
 TabButtons["Teleport"] = CreateTabButton("Teleport", "🌀", 4)
+TabButtons["Teleport"].Position = UDim2.new(0, 10, 0, TabStartY + (4 * 50))
+
 TabButtons["Visuals"] = CreateTabButton("Visuals", "👤", 5)
+TabButtons["Visuals"].Position = UDim2.new(0, 10, 0, TabStartY + (5 * 50))
+
 TabButtons["Character"] = CreateTabButton("Character", "🎭", 6)
+TabButtons["Character"].Position = UDim2.new(0, 10, 0, TabStartY + (6 * 50))
 
 TabContents["Settings"] = SettingsTab
 TabContents["ESP"] = ESPTab
@@ -346,7 +386,7 @@ local function CreateToggle(parent, text, callback)
         callback(State)
     end)
     
-    return Frame
+    return Frame, function() return State end
 end
 
 local function CreateSlider(parent, text, min, max, default, callback)
@@ -366,6 +406,7 @@ local function CreateSlider(parent, text, min, max, default, callback)
     Label.Parent = Frame
     
     local ValueLabel = Instance.new("TextLabel")
+    ValueLabel.Name = "ValueLabel"
     ValueLabel.Size = UDim2.new(0, 50, 0, 20)
     ValueLabel.Position = UDim2.new(1, -50, 0, 0)
     ValueLabel.BackgroundTransparency = 1
@@ -377,6 +418,7 @@ local function CreateSlider(parent, text, min, max, default, callback)
     ValueLabel.Parent = Frame
     
     local SliderBg = Instance.new("Frame")
+    SliderBg.Name = "SliderBg"
     SliderBg.Size = UDim2.new(1, 0, 0, 6)
     SliderBg.Position = UDim2.new(0, 0, 0, 30)
     SliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -388,6 +430,7 @@ local function CreateSlider(parent, text, min, max, default, callback)
     SliderBgCorner.Parent = SliderBg
     
     local SliderFill = Instance.new("Frame")
+    SliderFill.Name = "SliderFill"
     SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     SliderFill.BackgroundColor3 = MenuColor
     SliderFill.BorderSizePixel = 0
@@ -402,6 +445,11 @@ local function CreateSlider(parent, text, min, max, default, callback)
     SliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             Dragging = true
+            local pos = math.clamp((input.Position.X - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X, 0, 1)
+            local value = math.floor(min + (pos * (max - min)))
+            SliderFill.Size = UDim2.new(pos, 0, 1, 0)
+            ValueLabel.Text = tostring(value)
+            callback(value)
         end
     end)
     
@@ -441,6 +489,7 @@ local function CreateColorPicker(parent, text, defaultColor, callback)
     Label.Parent = Frame
     
     local ColorPreview = Instance.new("TextButton")
+    ColorPreview.Name = "ColorPreview"
     ColorPreview.Size = UDim2.new(0, 60, 0, 25)
     ColorPreview.Position = UDim2.new(1, -65, 0, 7)
     ColorPreview.BackgroundColor3 = defaultColor
@@ -451,40 +500,44 @@ local function CreateColorPicker(parent, text, defaultColor, callback)
     PreviewCorner.CornerRadius = UDim.new(0, 6)
     PreviewCorner.Parent = ColorPreview
     
-    local RSlider = CreateSlider(Frame, "R", 0, 255, defaultColor.R * 255, function() end)
-    RSlider.Position = UDim2.new(0, 0, 0, 40)
-    RSlider.Visible = false
+    local ExpandedFrame = Instance.new("Frame")
+    ExpandedFrame.Name = "ExpandedFrame"
+    ExpandedFrame.Size = UDim2.new(1, 0, 0, 160)
+    ExpandedFrame.Position = UDim2.new(0, 0, 0, 40)
+    ExpandedFrame.BackgroundTransparency = 1
+    ExpandedFrame.Visible = false
+    ExpandedFrame.Parent = Frame
     
-    local GSlider = CreateSlider(Frame, "G", 0, 255, defaultColor.G * 255, function() end)
-    GSlider.Position = UDim2.new(0, 0, 0, 95)
-    GSlider.Visible = false
+    local RSlider = CreateSlider(ExpandedFrame, "R", 0, 255, math.floor(defaultColor.R * 255), function(v) end)
+    RSlider.Position = UDim2.new(0, 0, 0, 0)
     
-    local BSlider = CreateSlider(Frame, "B", 0, 255, defaultColor.B * 255, function() end)
-    BSlider.Position = UDim2.new(0, 0, 0, 150)
-    BSlider.Visible = false
+    local GSlider = CreateSlider(ExpandedFrame, "G", 0, 255, math.floor(defaultColor.G * 255), function(v) end)
+    GSlider.Position = UDim2.new(0, 0, 0, 55)
+    
+    local BSlider = CreateSlider(ExpandedFrame, "B", 0, 255, math.floor(defaultColor.B * 255), function(v) end)
+    BSlider.Position = UDim2.new(0, 0, 0, 110)
     
     local Expanded = false
     
+    local function GetCurrentColor()
+        local rVal = tonumber(RSlider:FindFirstChild("ValueLabel") and RSlider.ValueLabel.Text) or math.floor(defaultColor.R * 255)
+        local gVal = tonumber(GSlider:FindFirstChild("ValueLabel") and GSlider.ValueLabel.Text) or math.floor(defaultColor.G * 255)
+        local bVal = tonumber(BSlider:FindFirstChild("ValueLabel") and BSlider.ValueLabel.Text) or math.floor(defaultColor.B * 255)
+        return Color3.fromRGB(rVal, gVal, bVal)
+    end
+    
     ColorPreview.MouseButton1Click:Connect(function()
         Expanded = not Expanded
-        RSlider.Visible = Expanded
-        GSlider.Visible = Expanded
-        BSlider.Visible = Expanded
+        ExpandedFrame.Visible = Expanded
         if Expanded then
             Frame.Size = UDim2.new(1, 0, 0, 200)
         else
             Frame.Size = UDim2.new(1, 0, 0, 40)
+            local newColor = GetCurrentColor()
+            ColorPreview.BackgroundColor3 = newColor
+            callback(newColor)
         end
     end)
-    
-    local function UpdateColor()
-        local r = tonumber(RSlider:FindFirstChildOfClass("TextLabel", true) and RSlider:FindFirstChildOfClass("TextLabel", true).Text) or defaultColor.R * 255
-        local g = tonumber(GSlider:FindFirstChildOfClass("TextLabel", true) and GSlider:FindFirstChildOfClass("TextLabel", true).Text) or defaultColor.G * 255
-        local b = tonumber(BSlider:FindFirstChildOfClass("TextLabel", true) and BSlider:FindFirstChildOfClass("TextLabel", true).Text) or defaultColor.B * 255
-        local newColor = Color3.fromRGB(r, g, b)
-        ColorPreview.BackgroundColor3 = newColor
-        callback(newColor)
-    end
     
     return Frame
 end
@@ -506,6 +559,7 @@ local function CreateDropdown(parent, text, options, callback)
     Label.Parent = Frame
     
     local Dropdown = Instance.new("TextButton")
+    Dropdown.Name = "Dropdown"
     Dropdown.Size = UDim2.new(0, 150, 0, 25)
     Dropdown.Position = UDim2.new(1, -155, 0, 5)
     Dropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -520,11 +574,12 @@ local function CreateDropdown(parent, text, options, callback)
     DropdownCorner.Parent = Dropdown
     
     local OptionsFrame = Instance.new("Frame")
+    OptionsFrame.Name = "OptionsFrame"
     OptionsFrame.Size = UDim2.new(0, 150, 0, #options * 25)
     OptionsFrame.Position = UDim2.new(0, 0, 0, 30)
     OptionsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     OptionsFrame.Visible = false
-    OptionsFrame.ZIndex = 10
+    OptionsFrame.ZIndex = 100
     OptionsFrame.Parent = Dropdown
     
     local OptionsCorner = Instance.new("UICorner")
@@ -540,7 +595,7 @@ local function CreateDropdown(parent, text, options, callback)
         OptionBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
         OptionBtn.TextSize = 12
         OptionBtn.Font = Enum.Font.Gotham
-        OptionBtn.ZIndex = 11
+        OptionBtn.ZIndex = 101
         OptionBtn.Parent = OptionsFrame
         
         OptionBtn.MouseButton1Click:Connect(function()
@@ -558,11 +613,12 @@ local function CreateDropdown(parent, text, options, callback)
 end
 
 local SettingsSection, SettingsContent = CreateSection(SettingsTab, "Menu Settings")
-CreateColorPicker(SettingsContent, "Menu Accent Color", MenuColor, function(color)
+
+local ColorPickerFrame = CreateColorPicker(SettingsContent, "Menu Accent Color", MenuColor, function(color)
     MenuColor = color
     TitleLabel.TextColor3 = color
     PlayTimeLabel.TextColor3 = color
-    for _, button in pairs(TabButtons) do
+    for name, button in pairs(TabButtons) do
         if button.BackgroundColor3 ~= Color3.fromRGB(30, 30, 40) then
             button.BackgroundColor3 = color
         end
@@ -600,7 +656,7 @@ CreateToggle(ESPContent, "Head Circle ESP", function(state)
     ESPStates.HeadCircle = state
 end)
 
-CreateColorPicker(ESPContent, "ESP Color", ESPColor, function(color)
+local ESPColorPicker = CreateColorPicker(ESPContent, "ESP Color", ESPColor, function(color)
     ESPColor = color
 end)
 
@@ -609,7 +665,10 @@ ESPFolder.Name = "ESPFolder"
 ESPFolder.Parent = ScreenGui
 
 local function UpdateESP()
-    ESPFolder:ClearAllChildren()
+    for _, child in pairs(ESPFolder:GetChildren()) do
+        child:Destroy()
+    end
+    
     if not ESPStates.Enabled then return end
     
     for _, player in pairs(Players:GetPlayers()) do
@@ -617,41 +676,121 @@ local function UpdateESP()
             local character = player.Character
             local hrp = character:FindFirstChild("HumanoidRootPart")
             local head = character:FindFirstChild("Head")
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            
+            if not hrp or not humanoid or humanoid.Health <= 0 then continue end
             
             if ESPStates.Chams then
                 local highlight = Instance.new("Highlight")
+                highlight.Name = player.Name .. "_Chams"
                 highlight.Adornee = character
                 highlight.FillColor = ESPColor
                 highlight.OutlineColor = ESPColor
-                highlight.FillTransparency = 0.5
+                highlight.FillTransparency = 0.6
+                highlight.OutlineTransparency = 0.1
+                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 highlight.Parent = ESPFolder
             end
             
             if ESPStates.Tracer and hrp then
-                local tracer = Instance.new("LineHandleAdornment")
-                tracer.Adornee = hrp
-                tracer.Color3 = ESPColor
-                tracer.Thickness = 2
-                tracer.Length = 5
-                tracer.Parent = ESPFolder
+                local tracerLine = Instance.new("Frame")
+                tracerLine.Name = player.Name .. "_Tracer"
+                tracerLine.AnchorPoint = Vector2.new(0.5, 0.5)
+                tracerLine.BackgroundColor3 = ESPColor
+                tracerLine.BorderSizePixel = 0
+                tracerLine.ZIndex = 5
+                
+                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if onScreen then
+                    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                    
+                    tracerLine.Size = UDim2.new(0, distance, 0, 1)
+                    tracerLine.Position = UDim2.new(0, (screenCenter.X + screenPos.X) / 2, 0, (screenCenter.Y + screenPos.Y) / 2)
+                    tracerLine.Rotation = math.deg(math.atan2(screenPos.Y - screenCenter.Y, screenPos.X - screenCenter.X))
+                    tracerLine.Parent = ESPFolder
+                end
             end
             
             if ESPStates.Box and hrp then
-                local box = Instance.new("BoxHandleAdornment")
-                box.Adornee = hrp
-                box.Color3 = ESPColor
-                box.Transparency = 0.5
-                box.Size = Vector3.new(4, 6, 2)
-                box.Parent = ESPFolder
+                local boxFrame = Instance.new("Frame")
+                boxFrame.Name = player.Name .. "_Box"
+                boxFrame.BackgroundTransparency = 1
+                boxFrame.BorderSizePixel = 0
+                boxFrame.ZIndex = 5
+                
+                local topLine = Instance.new("Frame")
+                topLine.Size = UDim2.new(1, 0, 0, 2)
+                topLine.BackgroundColor3 = ESPColor
+                topLine.BorderSizePixel = 0
+                topLine.Parent = boxFrame
+                
+                local bottomLine = Instance.new("Frame")
+                bottomLine.Size = UDim2.new(1, 0, 0, 2)
+                bottomLine.Position = UDim2.new(0, 0, 1, -2)
+                bottomLine.BackgroundColor3 = ESPColor
+                bottomLine.BorderSizePixel = 0
+                bottomLine.Parent = boxFrame
+                
+                local leftLine = Instance.new("Frame")
+                leftLine.Size = UDim2.new(0, 2, 1, 0)
+                leftLine.BackgroundColor3 = ESPColor
+                leftLine.BorderSizePixel = 0
+                leftLine.Parent = boxFrame
+                
+                local rightLine = Instance.new("Frame")
+                rightLine.Size = UDim2.new(0, 2, 1, 0)
+                rightLine.Position = UDim2.new(1, -2, 0, 0)
+                rightLine.BackgroundColor3 = ESPColor
+                rightLine.BorderSizePixel = 0
+                rightLine.Parent = boxFrame
+                
+                local headPos = head and Camera:WorldToViewportPoint(head.Position) or Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
+                local footPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                
+                local height = math.abs(headPos.Y - footPos.Y)
+                local width = height * 0.6
+                
+                boxFrame.Size = UDim2.new(0, width, 0, height)
+                boxFrame.Position = UDim2.new(0, headPos.X - width / 2, 0, headPos.Y)
+                boxFrame.Parent = ESPFolder
             end
             
             if ESPStates.HeadCircle and head then
-                local circle = Instance.new("SphereHandleAdornment")
-                circle.Adornee = head
-                circle.Color3 = ESPColor
-                circle.Transparency = 0.3
-                circle.Radius = 1.5
-                circle.Parent = ESPFolder
+                local headPos = Camera:WorldToViewportPoint(head.Position)
+                local headSize = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
+                local radius = math.abs(headPos.Y - headSize.Y) * 0.8
+                
+                local circleFrame = Instance.new("Frame")
+                circleFrame.Name = player.Name .. "_HeadCircle"
+                circleFrame.Size = UDim2.new(0, radius * 2, 0, radius * 2)
+                circleFrame.Position = UDim2.new(0, headPos.X - radius, 0, headPos.Y - radius)
+                circleFrame.BackgroundTransparency = 1
+                circleFrame.ZIndex = 5
+                
+                local circle = Instance.new("UICorner")
+                circle.CornerRadius = UDim.new(1, 0)
+                
+                local circleBg = Instance.new("Frame")
+                circleBg.Size = UDim2.new(1, 0, 1, 0)
+                circleBg.BackgroundTransparency = 1
+                circleBg.BorderSizePixel = 2
+                circleBg.BorderColor3 = ESPColor
+                circleBg.Parent = circleFrame
+                circle.Parent = circleBg
+                
+                local circleFill = Instance.new("Frame")
+                circleFill.Size = UDim2.new(1, -4, 1, -4)
+                circleFill.Position = UDim2.new(0, 2, 0, 2)
+                circleFill.BackgroundColor3 = ESPColor
+                circleFill.BackgroundTransparency = 0.8
+                circleFill.Parent = circleBg
+                
+                local fillCorner = Instance.new("UICorner")
+                fillCorner.CornerRadius = UDim.new(1, 0)
+                fillCorner.Parent = circleFill
+                
+                circleFrame.Parent = ESPFolder
             end
         end
     end
@@ -703,6 +842,7 @@ local FirstPersonEnabled = false
 CreateToggle(CameraContent, "Force Third Person", function(state)
     ThirdPersonEnabled = state
     if state then
+        FirstPersonEnabled = false
         LocalPlayer.CameraMode = Enum.CameraMode.Classic
         LocalPlayer.CameraMaxZoomDistance = 50
         LocalPlayer.CameraMinZoomDistance = 5
@@ -712,6 +852,7 @@ end)
 CreateToggle(CameraContent, "Force First Person", function(state)
     FirstPersonEnabled = state
     if state then
+        ThirdPersonEnabled = false
         LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
     end
 end)
@@ -720,6 +861,7 @@ local MovementSection, MovementContent = CreateSection(MovementTab, "Movement Se
 local FlyEnabled = false
 local FlySpeed = 50
 local GodModeEnabled = false
+local NoClipEnabled = false
 
 CreateToggle(MovementContent, "Enable Fly", function(state)
     FlyEnabled = state
@@ -753,6 +895,10 @@ CreateToggle(MovementContent, "God Mode", function(state)
         humanoid.MaxHealth = 100
         humanoid.Health = 100
     end
+end)
+
+CreateToggle(MovementContent, "NoClip", function(state)
+    NoClipEnabled = state
 end)
 
 local FlyConnection
@@ -791,6 +937,18 @@ FlyConnection = RunService.RenderStepped:Connect(function()
     hrp.RotVelocity = Vector3.new(0, 0, 0)
 end)
 
+local NoClipConnection
+RunService.Stepped:Connect(function()
+    if not NoClipEnabled then return end
+    local character = LocalPlayer.Character
+    if not character then return end
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+end)
+
 local TeleportSection, TeleportContent = CreateSection(TeleportTab, "Player Teleport")
 local SelectedPlayer = nil
 local PlayerList = {}
@@ -807,12 +965,17 @@ local function UpdatePlayerList()
         end
     end
     
-    local dropdownBtn = PlayerDropdown:FindFirstChildOfClass("TextButton")
+    local dropdownBtn = PlayerDropdown:FindFirstChild("Dropdown")
     if dropdownBtn then
         dropdownBtn.Text = PlayerList[1] or "No Players"
-        local optionsFrame = dropdownBtn:FindFirstChildOfClass("Frame")
+        local optionsFrame = dropdownBtn:FindFirstChild("OptionsFrame")
         if optionsFrame then
-            optionsFrame:ClearAllChildren()
+            for _, child in pairs(optionsFrame:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child:Destroy()
+                end
+            end
+            
             for i, name in ipairs(PlayerList) do
                 local btn = Instance.new("TextButton")
                 btn.Size = UDim2.new(1, 0, 0, 25)
@@ -822,7 +985,7 @@ local function UpdatePlayerList()
                 btn.TextColor3 = Color3.fromRGB(200, 200, 200)
                 btn.TextSize = 12
                 btn.Font = Enum.Font.Gotham
-                btn.ZIndex = 11
+                btn.ZIndex = 101
                 btn.Parent = optionsFrame
                 
                 btn.MouseButton1Click:Connect(function()
@@ -831,7 +994,7 @@ local function UpdatePlayerList()
                     SelectedPlayer = name
                 end)
             end
-            optionsFrame.Size = UDim2.new(0, 150, 0, #PlayerList * 25)
+            optionsFrame.Size = UDim2.new(0, 150, 0, math.max(#PlayerList * 25, 25))
         end
     end
 end
@@ -875,47 +1038,331 @@ local Skins = {
     Chamber = function()
         local character = LocalPlayer.Character
         if not character then return end
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Color = Color3.fromRGB(50, 50, 60)
+        
+        local chamberParts = {
+            Head = Color3.fromRGB(30, 30, 40),
+            UpperTorso = Color3.fromRGB(40, 40, 55),
+            LowerTorso = Color3.fromRGB(35, 35, 50),
+            LeftUpperArm = Color3.fromRGB(30, 30, 40),
+            LeftLowerArm = Color3.fromRGB(25, 25, 35),
+            LeftHand = Color3.fromRGB(20, 20, 30),
+            RightUpperArm = Color3.fromRGB(30, 30, 40),
+            RightLowerArm = Color3.fromRGB(25, 25, 35),
+            RightHand = Color3.fromRGB(20, 20, 30),
+            LeftUpperLeg = Color3.fromRGB(35, 35, 50),
+            LeftLowerLeg = Color3.fromRGB(30, 30, 45),
+            LeftFoot = Color3.fromRGB(25, 25, 35),
+            RightUpperLeg = Color3.fromRGB(35, 35, 50),
+            RightLowerLeg = Color3.fromRGB(30, 30, 45),
+            RightFoot = Color3.fromRGB(25, 25, 35),
+        }
+        
+        for partName, color in pairs(chamberParts) do
+            local part = character:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                part.Color = color
+                part.Material = Enum.Material.SmoothPlastic
             end
         end
+        
+        local head = character:FindFirstChild("Head")
+        if head then
+            for _, decal in pairs(head:GetChildren()) do
+                if decal:IsA("Decal") then
+                    decal:Destroy()
+                end
+            end
+            local face = Instance.new("Decal")
+            face.Texture = "rbxassetid://127959113"
+            face.Face = Enum.NormalId.Front
+            face.Parent = head
+        end
     end,
+    
     Jett = function()
         local character = LocalPlayer.Character
         if not character then return end
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Color = Color3.fromRGB(200, 200, 220)
+        
+        local jettParts = {
+            Head = Color3.fromRGB(220, 220, 230),
+            UpperTorso = Color3.fromRGB(200, 210, 225),
+            LowerTorso = Color3.fromRGB(180, 190, 210),
+            LeftUpperArm = Color3.fromRGB(210, 220, 235),
+            LeftLowerArm = Color3.fromRGB(200, 210, 225),
+            LeftHand = Color3.fromRGB(190, 200, 215),
+            RightUpperArm = Color3.fromRGB(210, 220, 235),
+            RightLowerArm = Color3.fromRGB(200, 210, 225),
+            RightHand = Color3.fromRGB(190, 200, 215),
+            LeftUpperLeg = Color3.fromRGB(190, 200, 215),
+            LeftLowerLeg = Color3.fromRGB(180, 190, 205),
+            LeftFoot = Color3.fromRGB(170, 180, 195),
+            RightUpperLeg = Color3.fromRGB(190, 200, 215),
+            RightLowerLeg = Color3.fromRGB(180, 190, 205),
+            RightFoot = Color3.fromRGB(170, 180, 195),
+        }
+        
+        for partName, color in pairs(jettParts) do
+            local part = character:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                part.Color = color
+                part.Material = Enum.Material.SmoothPlastic
             end
         end
+        
+        local head = character:FindFirstChild("Head")
+        if head then
+            for _, decal in pairs(head:GetChildren()) do
+                if decal:IsA("Decal") then
+                    decal:Destroy()
+                end
+            end
+            local face = Instance.new("Decal")
+            face.Texture = "rbxassetid://127959113"
+            face.Face = Enum.NormalId.Front
+            face.Parent = head
+        end
     end,
+    
     Reyna = function()
         local character = LocalPlayer.Character
         if not character then return end
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Color = Color3.fromRGB(150, 0, 200)
+        
+        local reynaParts = {
+            Head = Color3.fromRGB(20, 20, 20),
+            UpperTorso = Color3.fromRGB(30, 30, 30),
+            LowerTorso = Color3.fromRGB(25, 25, 25),
+            LeftUpperArm = Color3.fromRGB(20, 20, 20),
+            LeftLowerArm = Color3.fromRGB(15, 15, 15),
+            LeftHand = Color3.fromRGB(10, 10, 10),
+            RightUpperArm = Color3.fromRGB(20, 20, 20),
+            RightLowerArm = Color3.fromRGB(15, 15, 15),
+            RightHand = Color3.fromRGB(10, 10, 10),
+            LeftUpperLeg = Color3.fromRGB(25, 25, 25),
+            LeftLowerLeg = Color3.fromRGB(20, 20, 20),
+            LeftFoot = Color3.fromRGB(15, 15, 15),
+            RightUpperLeg = Color3.fromRGB(25, 25, 25),
+            RightLowerLeg = Color3.fromRGB(20, 20, 20),
+            RightFoot = Color3.fromRGB(15, 15, 15),
+        }
+        
+        for partName, color in pairs(reynaParts) do
+            local part = character:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                part.Color = color
+                part.Material = Enum.Material.SmoothPlastic
             end
         end
+        
+        local head = character:FindFirstChild("Head")
+        if head then
+            for _, decal in pairs(head:GetChildren()) do
+                if decal:IsA("Decal") then
+                    decal:Destroy()
+                end
+            end
+            local face = Instance.new("Decal")
+            face.Texture = "rbxassetid://127959113"
+            face.Face = Enum.NormalId.Front
+            face.Parent = head
+        end
+        
+        local glow = Instance.new("PointLight")
+        glow.Color = Color3.fromRGB(150, 0, 200)
+        glow.Brightness = 2
+        glow.Range = 10
+        glow.Parent = head
     end,
+    
     Pig = function()
         local character = LocalPlayer.Character
         if not character then return end
+        
         for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                 part.Color = Color3.fromRGB(255, 180, 200)
                 part.Material = Enum.Material.SmoothPlastic
             end
         end
+        
+        local head = character:FindFirstChild("Head")
+        if head then
+            for _, decal in pairs(head:GetChildren()) do
+                if decal:IsA("Decal") then
+                    decal:Destroy()
+                end
+            end
+            
+            local snout = Instance.new("Part")
+            snout.Name = "Snout"
+            snout.Size = Vector3.new(0.8, 0.6, 0.6)
+            snout.Color = Color3.fromRGB(255, 160, 180)
+            snout.Material = Enum.Material.SmoothPlastic
+            snout.Position = head.Position + Vector3.new(0, -0.2, 0.8)
+            snout.Parent = character
+            
+            local snoutWeld = Instance.new("Weld")
+            snoutWeld.Part0 = head
+            snoutWeld.Part1 = snout
+            snoutWeld.C0 = CFrame.new(0, -0.2, 0.6)
+            snoutWeld.Parent = snout
+            
+            local leftEar = Instance.new("Part")
+            leftEar.Name = "LeftEar"
+            leftEar.Size = Vector3.new(0.4, 0.6, 0.3)
+            leftEar.Color = Color3.fromRGB(255, 160, 180)
+            leftEar.Material = Enum.Material.SmoothPlastic
+            leftEar.Parent = character
+            
+            local leftEarWeld = Instance.new("Weld")
+            leftEarWeld.Part0 = head
+            leftEarWeld.Part1 = leftEar
+            leftEarWeld.C0 = CFrame.new(-0.6, 0.5, 0)
+            leftEarWeld.Parent = leftEar
+            
+            local rightEar = Instance.new("Part")
+            rightEar.Name = "RightEar"
+            rightEar.Size = Vector3.new(0.4, 0.6, 0.3)
+            rightEar.Color = Color3.fromRGB(255, 160, 180)
+            rightEar.Material = Enum.Material.SmoothPlastic
+            rightEar.Parent = character
+            
+            local rightEarWeld = Instance.new("Weld")
+            rightEarWeld.Part0 = head
+            rightEarWeld.Part1 = rightEar
+            rightEarWeld.C0 = CFrame.new(0.6, 0.5, 0)
+            rightEarWeld.Parent = rightEar
+            
+            local tail = Instance.new("Part")
+            tail.Name = "Tail"
+            tail.Size = Vector3.new(0.3, 0.3, 1)
+            tail.Color = Color3.fromRGB(255, 160, 180)
+            tail.Material = Enum.Material.SmoothPlastic
+            tail.Parent = character
+            
+            local lowerTorso = character:FindFirstChild("LowerTorso")
+            if lowerTorso then
+                local tailWeld = Instance.new("Weld")
+                tailWeld.Part0 = lowerTorso
+                tailWeld.Part1 = tail
+                tailWeld.C0 = CFrame.new(0, 0, 0.8)
+                tailWeld.Parent = tail
+            end
+        end
     end,
+    
     Cow = function()
         local character = LocalPlayer.Character
         if not character then return end
+        
         for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                 part.Color = Color3.fromRGB(240, 240, 240)
                 part.Material = Enum.Material.SmoothPlastic
+            end
+        end
+        
+        local head = character:FindFirstChild("Head")
+        if head then
+            for _, decal in pairs(head:GetChildren()) do
+                if decal:IsA("Decal") then
+                    decal:Destroy()
+                end
+            end
+            
+            local spots = {
+                {Vector3.new(0, 0.5, 0.4), Vector3.new(0.3, 0.3, 0.1)},
+                {Vector3.new(-0.4, 0, 0.4), Vector3.new(0.2, 0.4, 0.1)},
+                {Vector3.new(0.4, -0.3, 0.3), Vector3.new(0.25, 0.25, 0.1)},
+            }
+            
+            for _, spotData in ipairs(spots) do
+                local spot = Instance.new("Part")
+                spot.Name = "Spot"
+                spot.Size = spotData[2]
+                spot.Color = Color3.fromRGB(30, 30, 30)
+                spot.Material = Enum.Material.SmoothPlastic
+                spot.Parent = character
+                
+                local spotWeld = Instance.new("Weld")
+                spotWeld.Part0 = head
+                spotWeld.Part1 = spot
+                spotWeld.C0 = CFrame.new(spotData[1])
+                spotWeld.Parent = spot
+            end
+            
+            local leftHorn = Instance.new("Part")
+            leftHorn.Name = "LeftHorn"
+            leftHorn.Size = Vector3.new(0.2, 0.5, 0.2)
+            leftHorn.Color = Color3.fromRGB(200, 180, 150)
+            leftHorn.Material = Enum.Material.SmoothPlastic
+            leftHorn.Parent = character
+            
+            local leftHornWeld = Instance.new("Weld")
+            leftHornWeld.Part0 = head
+            leftHornWeld.Part1 = leftHorn
+            leftHornWeld.C0 = CFrame.new(-0.5, 0.6, 0)
+            leftHornWeld.Parent = leftHorn
+            
+            local rightHorn = Instance.new("Part")
+            rightHorn.Name = "RightHorn"
+            rightHorn.Size = Vector3.new(0.2, 0.5, 0.2)
+            rightHorn.Color = Color3.fromRGB(200, 180, 150)
+            rightHorn.Material = Enum.Material.SmoothPlastic
+            rightHorn.Parent = character
+            
+            local rightHornWeld = Instance.new("Weld")
+            rightHornWeld.Part0 = head
+            rightHornWeld.Part1 = rightHorn
+            rightHornWeld.C0 = CFrame.new(0.5, 0.6, 0)
+            rightHornWeld.Parent = rightHorn
+            
+            local nose = Instance.new("Part")
+            nose.Name = "Nose"
+            nose.Size = Vector3.new(0.6, 0.4, 0.3)
+            nose.Color = Color3.fromRGB(255, 180, 180)
+            nose.Material = Enum.Material.SmoothPlastic
+            nose.Parent = character
+            
+            local noseWeld = Instance.new("Weld")
+            noseWeld.Part0 = head
+            noseWeld.Part1 = nose
+            noseWeld.C0 = CFrame.new(0, -0.2, 0.5)
+            noseWeld.Parent = nose
+            
+            local tail = Instance.new("Part")
+            tail.Name = "Tail"
+            tail.Size = Vector3.new(0.2, 0.8, 0.2)
+            tail.Color = Color3.fromRGB(240, 240, 240)
+            tail.Material = Enum.Material.SmoothPlastic
+            tail.Parent = character
+            
+            local lowerTorso = character:FindFirstChild("LowerTorso")
+            if lowerTorso then
+                local tailWeld = Instance.new("Weld")
+                tailWeld.Part0 = lowerTorso
+                tailWeld.Part1 = tail
+                tailWeld.C0 = CFrame.new(0, 0, 0.8)
+                tailWeld.Parent = tail
+            end
+        end
+        
+        for _, partName in ipairs({"UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg"}) do
+            local part = character:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                for i = 1, 3 do
+                    local spot = Instance.new("Part")
+                    spot.Name = "BodySpot"
+                    spot.Size = Vector3.new(0.4, 0.4, 0.1)
+                    spot.Color = Color3.fromRGB(30, 30, 30)
+                    spot.Material = Enum.Material.SmoothPlastic
+                    spot.Parent = character
+                    
+                    local spotWeld = Instance.new("Weld")
+                    spotWeld.Part0 = part
+                    spotWeld.Part1 = spot
+                    spotWeld.C0 = CFrame.new(math.random(-5, 5) / 10, math.random(-5, 5) / 10, part.Size.Z / 2 + 0.05)
+                    spotWeld.Parent = spot
+                end
             end
         end
     end
@@ -928,27 +1375,54 @@ CreateDropdown(CharacterContent, "Select Skin", {"Default", "Chamber", "Jett", "
     elseif selected == "Default" then
         local character = LocalPlayer.Character
         if not character then return end
+        
         for _, part in pairs(character:GetDescendants()) do
             if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                 part.Color = Color3.fromRGB(163, 162, 165)
+                part.Material = Enum.Material.Plastic
+            end
+        end
+        
+        for _, extra in pairs(character:GetChildren()) do
+            if extra:IsA("Part") and (extra.Name == "Snout" or extra.Name == "LeftEar" or extra.Name == "RightEar" or extra.Name == "Tail" or extra.Name == "Spot" or extra.Name == "BodySpot" or extra.Name == "LeftHorn" or extra.Name == "RightHorn" or extra.Name == "Nose") then
+                extra:Destroy()
+            end
+        end
+        
+        local head = character:FindFirstChild("Head")
+        if head then
+            for _, decal in pairs(head:GetChildren()) do
+                if decal:IsA("Decal") then
+                    decal:Destroy()
+                end
             end
         end
     end
 end)
 
 local BypassSection, BypassContent = CreateSection(SettingsTab, "Bypass Settings")
+
 CreateToggle(BypassContent, "Anti-Ban Bypass", function(state)
     if state then
-        local mt = getrawmetatable(game)
-        if mt then
+        local success, mt = pcall(getrawmetatable, game)
+        if success and mt then
             setreadonly(mt, false)
             local oldNamecall = mt.__namecall
             mt.__namecall = newcclosure(function(self, ...)
                 local method = getnamecallmethod()
                 if method == "Kick" then
+                    warn("[BYPASS] Kick attempt blocked")
                     return nil
                 end
                 return oldNamecall(self, ...)
+            end)
+            
+            local oldIndex = mt.__index
+            mt.__index = newcclosure(function(self, key)
+                if tostring(self) == "Humanoid" and key == "Health" then
+                    return 100
+                end
+                return oldIndex(self, key)
             end)
         end
     end
@@ -962,22 +1436,68 @@ CreateToggle(BypassContent, "Fly Bypass", function(state)
         if humanoid then
             humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
             humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
         end
     end
 end)
 
 CreateToggle(BypassContent, "Aimbot Bypass", function(state)
     if state then
-        local mt = getrawmetatable(game)
-        if mt then
+        local success, mt = pcall(getrawmetatable, game)
+        if success and mt then
             setreadonly(mt, false)
             local oldIndex = mt.__index
             mt.__index = newcclosure(function(self, key)
-                if key == "CFrame" and self == Camera then
-                    return oldIndex(self, key)
+                if self == Camera and key == "CFrame" then
+                    local cf = oldIndex(self, key)
+                    return cf
                 end
                 return oldIndex(self, key)
             end)
+        end
+    end
+end)
+
+CreateToggle(BypassContent, "Anti-Cheat Bypass", function(state)
+    if state then
+        local success, mt = pcall(getrawmetatable, game)
+        if success and mt then
+            setreadonly(mt, false)
+            local oldNamecall = mt.__namecall
+            mt.__namecall = newcclosure(function(self, ...)
+                local method = getnamecallmethod()
+                local args = {...}
+                
+                if method == "FireServer" then
+                    local remoteName = tostring(self)
+                    if remoteName:lower():find("ban") or remoteName:lower():find("kick") or remoteName:lower():find("report") or remoteName:lower():find("cheat") or remoteName:lower():find("detect") then
+                        warn("[BYPASS] Blocked remote: " .. remoteName)
+                        return nil
+                    end
+                end
+                
+                if method == "InvokeServer" then
+                    local remoteName = tostring(self)
+                    if remoteName:lower():find("ban") or remoteName:lower():find("kick") or remoteName:lower():find("report") or remoteName:lower():find("cheat") or remoteName:lower():find("detect") then
+                        warn("[BYPASS] Blocked remote: " .. remoteName)
+                        return nil
+                    end
+                end
+                
+                return oldNamecall(self, ...)
+            end)
+        end
+        
+        for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
+            if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                local name = remote.Name:lower()
+                if name:find("ban") or name:find("kick") or name:find("report") or name:find("cheat") or name:find("detect") or name:find("anticheat") then
+                    remote.OnClientEvent:Connect(function()
+                        warn("[BYPASS] Blocked client event from: " .. remote.Name)
+                        return nil
+                    end)
+                end
+            end
         end
     end
 end)
@@ -1018,11 +1538,17 @@ end)
 LocalPlayer.CharacterAdded:Connect(function(character)
     wait(1)
     CharacterNameLabel.Text = "Character: " .. character.Name
+    
     if GodModeEnabled then
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if humanoid then
             humanoid.MaxHealth = math.huge
             humanoid.Health = math.huge
         end
+    end
+    
+    if CurrentSkin ~= "Default" and Skins[CurrentSkin] then
+        wait(0.5)
+        Skins[CurrentSkin]()
     end
 end)
