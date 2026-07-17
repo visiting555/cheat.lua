@@ -1,7 +1,7 @@
 
 -- ============================================
 -- intabazaki.lua
--- Enhanced Version v2.2
+-- Enhanced Version v2.3
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -280,7 +280,6 @@ local function CreateDynamicDropdown(text, callback)
     local currentOptions = {}
 
     local function UpdateOptions(options)
-        -- Clear old buttons
         for _, btn in ipairs(optionButtons) do
             btn:Destroy()
         end
@@ -1430,43 +1429,45 @@ CreateToggle("Ammo", function(enabled)
             if not target or not target.Character then return end
 
             local targetHead = target.Character:FindFirstChild("Head")
+            local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
             local myChar = LocalPlayer.Character
-            if not targetHead or not myChar then return end
+            if not targetHead or not targetHRP or not myChar then return end
 
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
 
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
+            local hrpPos = targetHRP.Position
 
-            -- Sitting position: character sits in front of target
-            -- Positioned at mouth level with legs bent (sitting posture)
-            local forwardOffset = headCF.LookVector * 0.8
-            local sitPosition = headPos + forwardOffset - Vector3.new(0, 1.2, 0)
+            -- Character wraps around target's legs/waist
+            -- Position: in front of target, body at chest level, head at face level
+            -- Groin/torso-leg intersection aligns with target's mouth/face
+            local forwardOffset = headCF.LookVector * 0.6
+            local wrapPosition = hrpPos + forwardOffset + Vector3.new(0, 0.3, 0)
 
-            -- Face the target (look at target's face/mouth area)
-            local lookAt = headPos + Vector3.new(0, -0.3, 0)
-            local baseCF = CFrame.new(sitPosition, lookAt)
+            -- Face the target (look at target's face)
+            local lookAt = headPos
+            local baseCF = CFrame.new(wrapPosition, lookAt)
 
-            -- Apply sitting rotation (tilted back slightly like sitting)
-            baseCF = baseCF * CFrame.Angles(math.rad(-15), 0, 0)
+            -- Tilt forward slightly (wrapping posture)
+            baseCF = baseCF * CFrame.Angles(math.rad(25), 0, 0)
 
-            -- Apply gentle forward-backward bobbing motion (increased speed)
+            -- Gentle forward-backward motion (thrusting)
             local time = tick()
-            local bobOffset = math.sin(time * 12) * 0.18
+            local bobOffset = math.sin(time * 12) * 0.15
             baseCF = baseCF * CFrame.new(0, 0, bobOffset)
 
             myHRP.CFrame = baseCF
 
-            -- Freeze velocity to prevent falling or sliding
+            -- Freeze velocity
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
 
-            -- Set sitting posture by adjusting humanoid
+            -- Set wrapping posture
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
-                hum.Sit = true
             end
         end)
     else
@@ -1484,7 +1485,6 @@ CreateToggle("Ammo", function(enabled)
             local hum = char:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = false
-                hum.Sit = false
             end
         end
     end
@@ -1494,11 +1494,9 @@ end)
 -- CLEANUP ON DEATH
 -- ============================================
 LocalPlayer.CharacterAdded:Connect(function(newChar)
-    -- Auto-re-enable fly if it was on before death
     if FlyWasEnabled then
         task.delay(0.5, function()
             if FlyWasEnabled and not States.Fly then
-                -- Re-trigger fly
                 local hum = newChar:FindFirstChildOfClass("Humanoid")
                 local hrp = newChar:FindFirstChild("HumanoidRootPart")
                 if hum and hrp then
@@ -1607,7 +1605,7 @@ local notif = Instance.new("TextLabel")
 notif.Size = UDim2.new(0, 320, 0, 40)
 notif.Position = UDim2.new(0.5, -160, 0, 20)
 notif.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-notif.Text = "intabazaki.lua v2.2 Loaded | Press INSERT"
+notif.Text = "intabazaki.lua v2.3 Loaded | Press INSERT"
 notif.TextColor3 = Color3.fromRGB(220, 20, 60)
 notif.Font = Enum.Font.GothamBold
 notif.TextSize = 14
@@ -1621,4 +1619,4 @@ task.delay(5, function()
     notif:Destroy()
 end)
 
-print("intabazaki.lua v2.2 loaded successfully")
+print("intabazaki.lua v2.3 loaded successfully")
