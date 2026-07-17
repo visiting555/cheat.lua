@@ -1438,20 +1438,20 @@ CreateToggle("Ammo", function(enabled)
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
 
-            -- Character crouches in FRONT of target (facing target)
-            -- Groin/lower torso aligns with target's head/mouth
-            -- Using -LookVector to place IN FRONT of where target is facing
-            local frontOffset = -headCF.LookVector * 0.6
-            local crouchPosition = headPos + frontOffset - Vector3.new(0, 0.8, 0)
+            -- Character stands VERTICAL in front of target
+            -- Groin/penis area aligns with target's head/face
+            -- Position: in front of target, raised up so groin is at head level
+            local frontOffset = -headCF.LookVector * 0.7
+            local verticalPosition = headPos + frontOffset + Vector3.new(0, 1.2, 0)
 
-            -- Face the target (look at target's face from front)
+            -- Face the target (look down at target's face)
             local lookAt = headPos
-            local baseCF = CFrame.new(crouchPosition, lookAt)
+            local baseCF = CFrame.new(verticalPosition, lookAt)
 
-            -- Crouched posture (leaning forward slightly toward target)
-            baseCF = baseCF * CFrame.Angles(math.rad(35), 0, 0)
+            -- Vertical upright stance
+            baseCF = baseCF * CFrame.Angles(math.rad(-15), 0, 0)
 
-            -- Gentle forward-backward motion (thrusting toward target's mouth)
+            -- Gentle forward-backward motion (thrusting)
             local time = tick()
             local bobOffset = math.sin(time * 12) * 0.15
             baseCF = baseCF * CFrame.new(0, 0, bobOffset)
@@ -1462,21 +1462,10 @@ CreateToggle("Ammo", function(enabled)
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
 
-            -- Set crouched posture
+            -- Set upright posture
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
-            end
-
-            -- Position hands on target's head
-            local myLeftHand = myChar:FindFirstChild("LeftHand")
-            local myRightHand = myChar:FindFirstChild("RightHand")
-
-            if myLeftHand then
-                myLeftHand.CFrame = targetHead.CFrame * CFrame.new(-0.4, 0, 0.3)
-            end
-            if myRightHand then
-                myRightHand.CFrame = targetHead.CFrame * CFrame.new(0.4, 0, 0.3)
             end
         end)
     else
