@@ -1,8 +1,7 @@
 
 -- ============================================
--- ANTI-CHEAT TEST FRAMEWORK v1.0
--- Test Environment: Roblox Studio / Private Server Only
--- Purpose: Anti-cheat mechanism validation
+-- ANTI-CHEAT TEST FRAMEWORK v2.0
+-- Enhanced Version with Fixes
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -28,8 +27,8 @@ ScreenGui.Parent = game.CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 320, 0, 500)
-MainFrame.Position = UDim2.new(0.02, 0, 0.1, 0)
+MainFrame.Size = UDim2.new(0, 340, 0, 520)
+MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -55,7 +54,7 @@ local TitleText = Instance.new("TextLabel")
 TitleText.Name = "TitleText"
 TitleText.Size = UDim2.new(1, 0, 1, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "ANTI-CHEAT TEST SUITE"
+TitleText.Text = "ANTI-CHEAT TEST SUITE v2.0"
 TitleText.TextColor3 = Color3.fromRGB(220, 20, 60)
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextSize = 16
@@ -68,7 +67,7 @@ ScrollFrame.Position = UDim2.new(0, 5, 0, 40)
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.ScrollBarThickness = 4
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(220, 20, 60)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 2000)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 2500)
 ScrollFrame.Parent = MainFrame
 
 local UIListLayout = Instance.new("UIListLayout")
@@ -396,6 +395,9 @@ local States = {
     ESPTracer = false,
     ESPColor = Color3.fromRGB(255, 0, 0),
     SilentAim = false,
+    Aimbot = false,
+    AimbotFOV = 100,
+    AimbotSmoothness = 0.5,
     AntiAFK = false,
     FOV = 70,
     RainbowChar = false,
@@ -421,6 +423,9 @@ local OwnerBillboard = nil
 local RainbowConnection = nil
 local GlassConnection = nil
 local AFKConnection = nil
+local AimbotConnection = nil
+local AmmoConnection = nil
+local ESPConnection = nil
 
 -- ============================================
 -- PLAYER LIST HELPER
@@ -445,6 +450,48 @@ local function GetPlayerByName(name)
         end
     end
     return nil
+end
+
+-- ============================================
+-- ESP CLEANUP FUNCTION
+-- ============================================
+local function ClearESPForPlayer(player)
+    if ESPObjects[player] then
+        local esp = ESPObjects[player]
+        -- Destroy Drawing objects
+        if esp.Box and typeof(esp.Box) == "table" and esp.Box.Remove then
+            esp.Box:Remove()
+        end
+        if esp.Name and typeof(esp.Name) == "table" and esp.Name.Remove then
+            esp.Name:Remove()
+        end
+        if esp.Tracer and typeof(esp.Tracer) == "table" and esp.Tracer.Remove then
+            esp.Tracer:Remove()
+        end
+        if esp.Skeleton then
+            for _, line in ipairs(esp.Skeleton) do
+                if typeof(line) == "table" and line.Remove then
+                    line:Remove()
+                end
+            end
+        end
+        -- Destroy Instance objects (Chams)
+        if esp.ChamsList then
+            for _, v in ipairs(esp.ChamsList) do
+                if typeof(v) == "Instance" then
+                    v:Destroy()
+                end
+            end
+        end
+        ESPObjects[player] = nil
+    end
+end
+
+local function ClearAllESP()
+    for player, _ in pairs(ESPObjects) do
+        ClearESPForPlayer(player)
+    end
+    ESPObjects = {}
 end
 
 -- ============================================
@@ -610,52 +657,143 @@ CreateSection("ESP TESTS")
 CreateToggle("Enable ESP", function(enabled)
     States.ESP = enabled
     if not enabled then
-        for _, obj in pairs(ESPObjects) do
-            for _, v in pairs(obj) do
-                if typeof(v) == "Instance" then
-                    v:Destroy()
-                end
-            end
-        end
-        ESPObjects = {}
+        ClearAllESP()
     end
 end)
 
 CreateToggle("Chams ESP", function(enabled)
     States.ESPChams = enabled
+    if not enabled then
+        for player, esp in pairs(ESPObjects) do
+            if esp.ChamsList then
+                for _, v in ipairs(esp.ChamsList) do
+                    if typeof(v) == "Instance" then
+                        v:Destroy()
+                    end
+                end
+                esp.ChamsList = nil
+            end
+        end
+    end
 end)
 
 CreateToggle("Box ESP", function(enabled)
     States.ESPBox = enabled
+    if not enabled then
+        for player, esp in pairs(ESPObjects) do
+            if esp.Box and typeof(esp.Box) == "table" and esp.Box.Remove then
+                esp.Box:Remove()
+                esp.Box = nil
+            end
+        end
+    end
 end)
 
 CreateToggle("Name ESP", function(enabled)
     States.ESPName = enabled
+    if not enabled then
+        for player, esp in pairs(ESPObjects) do
+            if esp.Name and typeof(esp.Name) == "table" and esp.Name.Remove then
+                esp.Name:Remove()
+                esp.Name = nil
+            end
+        end
+    end
 end)
 
 CreateToggle("Skeleton ESP", function(enabled)
     States.ESPSkeleton = enabled
+    if not enabled then
+        for player, esp in pairs(ESPObjects) do
+            if esp.Skeleton then
+                for _, line in ipairs(esp.Skeleton) do
+                    if typeof(line) == "table" and line.Remove then
+                        line:Remove()
+                    end
+                end
+                esp.Skeleton = nil
+            end
+        end
+    end
 end)
 
 CreateToggle("Tracer ESP", function(enabled)
     States.ESPTracer = enabled
+    if not enabled then
+        for player, esp in pairs(ESPObjects) do
+            if esp.Tracer and typeof(esp.Tracer) == "table" and esp.Tracer.Remove then
+                esp.Tracer:Remove()
+                esp.Tracer = nil
+            end
+        end
+    end
 end)
 
 CreateColorPicker("ESP Color", function(color)
     States.ESPColor = color
 end)
 
--- ESP Update Loop
-RunService.RenderStepped:Connect(function()
-    if not States.ESP then return end
+-- ============================================
+-- SKELETON JOINTS DEFINITION
+-- ============================================
+local SkeletonJoints = {
+    {"Head", "UpperTorso"},
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"},
+    {"LeftUpperArm", "LeftLowerArm"},
+    {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"},
+    {"RightUpperArm", "RightLowerArm"},
+    {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"},
+    {"LeftUpperLeg", "LeftLowerLeg"},
+    {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"},
+    {"RightUpperLeg", "RightLowerLeg"},
+    {"RightLowerLeg", "RightFoot"}
+}
+
+-- ============================================
+-- ESP UPDATE LOOP
+-- ============================================
+if ESPConnection then ESPConnection:Disconnect() end
+ESPConnection = RunService.RenderStepped:Connect(function()
+    if not States.ESP then
+        -- Hide all ESP when master toggle is off
+        for player, esp in pairs(ESPObjects) do
+            if esp.Box and typeof(esp.Box) == "table" then
+                esp.Box.Visible = false
+            end
+            if esp.Name and typeof(esp.Name) == "table" then
+                esp.Name.Visible = false
+            end
+            if esp.Tracer and typeof(esp.Tracer) == "table" then
+                esp.Tracer.Visible = false
+            end
+            if esp.Skeleton then
+                for _, line in ipairs(esp.Skeleton) do
+                    if typeof(line) == "table" then
+                        line.Visible = false
+                    end
+                end
+            end
+        end
+        return
+    end
 
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LocalPlayer then continue end
-        if not p.Character then continue end
+        if not p.Character then
+            ClearESPForPlayer(p)
+            continue
+        end
 
         local char = p.Character
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then continue end
+        if not hrp then
+            ClearESPForPlayer(p)
+            continue
+        end
 
         if not ESPObjects[p] then
             ESPObjects[p] = {}
@@ -663,9 +801,10 @@ RunService.RenderStepped:Connect(function()
 
         local esp = ESPObjects[p]
 
-        -- Chams
+        -- Chams ESP
         if States.ESPChams then
-            if not esp.Chams then
+            if not esp.ChamsList then
+                esp.ChamsList = {}
                 for _, part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") then
                         local highlight = Instance.new("Highlight")
@@ -675,25 +814,25 @@ RunService.RenderStepped:Connect(function()
                         highlight.FillTransparency = 0.5
                         highlight.OutlineTransparency = 0
                         highlight.Parent = part
-                        table.insert(esp, highlight)
+                        table.insert(esp.ChamsList, highlight)
                     end
                 end
-                esp.Chams = true
             end
-            for _, v in ipairs(esp) do
+            for _, v in ipairs(esp.ChamsList) do
                 if v:IsA("Highlight") then
                     v.FillColor = States.ESPColor
                     v.OutlineColor = States.ESPColor
                 end
             end
         else
-            for i = #esp, 1, -1 do
-                if esp[i]:IsA("Highlight") then
-                    esp[i]:Destroy()
-                    table.remove(esp, i)
+            if esp.ChamsList then
+                for _, v in ipairs(esp.ChamsList) do
+                    if typeof(v) == "Instance" then
+                        v:Destroy()
+                    end
                 end
+                esp.ChamsList = nil
             end
-            esp.Chams = nil
         end
 
         -- Box ESP
@@ -708,10 +847,20 @@ RunService.RenderStepped:Connect(function()
             end
             local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
             if onScreen then
-                esp.Box.Visible = true
-                esp.Box.Size = Vector2.new(50, 80)
-                esp.Box.Position = Vector2.new(pos.X - 25, pos.Y - 40)
-                esp.Box.Color = States.ESPColor
+                local head = char:FindFirstChild("Head")
+                local root = hrp
+                if head and root then
+                    local headPos = Camera:WorldToViewportPoint(head.Position)
+                    local rootPos = Camera:WorldToViewportPoint(root.Position)
+                    local height = math.abs(headPos.Y - rootPos.Y) + 15
+                    local width = height * 0.6
+                    esp.Box.Visible = true
+                    esp.Box.Size = Vector2.new(width, height)
+                    esp.Box.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
+                    esp.Box.Color = States.ESPColor
+                else
+                    esp.Box.Visible = false
+                end
             else
                 esp.Box.Visible = false
             end
@@ -730,17 +879,59 @@ RunService.RenderStepped:Connect(function()
                 name.Outline = true
                 esp.Name = name
             end
-            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
-            if onScreen then
-                esp.Name.Visible = true
-                esp.Name.Position = Vector2.new(pos.X, pos.Y)
-                esp.Name.Text = p.Name
-                esp.Name.Color = States.ESPColor
+            local head = char:FindFirstChild("Head")
+            if head then
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                if onScreen then
+                    esp.Name.Visible = true
+                    esp.Name.Position = Vector2.new(pos.X, pos.Y)
+                    esp.Name.Text = p.Name
+                    esp.Name.Color = States.ESPColor
+                else
+                    esp.Name.Visible = false
+                end
             else
                 esp.Name.Visible = false
             end
         elseif esp.Name then
             esp.Name.Visible = false
+        end
+
+        -- Skeleton ESP
+        if States.ESPSkeleton then
+            if not esp.Skeleton then
+                esp.Skeleton = {}
+                for i = 1, #SkeletonJoints do
+                    local line = Drawing.new("Line")
+                    line.Visible = false
+                    line.Thickness = 1.5
+                    line.Color = States.ESPColor
+                    table.insert(esp.Skeleton, line)
+                end
+            end
+            for i, joint in ipairs(SkeletonJoints) do
+                local part1 = char:FindFirstChild(joint[1])
+                local part2 = char:FindFirstChild(joint[2])
+                local line = esp.Skeleton[i]
+                if part1 and part2 then
+                    local pos1, onScreen1 = Camera:WorldToViewportPoint(part1.Position)
+                    local pos2, onScreen2 = Camera:WorldToViewportPoint(part2.Position)
+                    if onScreen1 and onScreen2 then
+                        line.Visible = true
+                        line.From = Vector2.new(pos1.X, pos1.Y)
+                        line.To = Vector2.new(pos2.X, pos2.Y)
+                        line.Color = States.ESPColor
+                    else
+                        line.Visible = false
+                    end
+                else
+                    line.Visible = false
+                end
+            end
+        elseif esp.Skeleton then
+            for _, line in ipairs(esp.Skeleton) do
+                line.Visible = false
+            end
         end
 
         -- Tracer ESP
@@ -765,6 +956,13 @@ RunService.RenderStepped:Connect(function()
             esp.Tracer.Visible = false
         end
     end
+
+    -- Clean up ESP for players who left
+    for player, _ in pairs(ESPObjects) do
+        if not player.Parent then
+            ClearESPForPlayer(player)
+        end
+    end
 end)
 
 -- ============================================
@@ -774,6 +972,57 @@ CreateSection("COMBAT TESTS")
 
 CreateToggle("Silent Aim", function(enabled)
     States.SilentAim = enabled
+end)
+
+CreateToggle("Aimbot", function(enabled)
+    States.Aimbot = enabled
+    if enabled then
+        if AimbotConnection then AimbotConnection:Disconnect() end
+        AimbotConnection = RunService.RenderStepped:Connect(function()
+            if not States.Aimbot then return end
+
+            local closestPlayer = nil
+            local closestDistance = States.AimbotFOV
+            local mousePos = UserInputService:GetMouseLocation()
+
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p == LocalPlayer then continue end
+                if not p.Character then continue end
+                local head = p.Character:FindFirstChild("Head")
+                if not head then continue end
+
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestPlayer = p
+                    end
+                end
+            end
+
+            if closestPlayer and closestPlayer.Character then
+                local head = closestPlayer.Character:FindFirstChild("Head")
+                if head then
+                    local targetCF = CFrame.new(Camera.CFrame.Position, head.Position)
+                    Camera.CFrame = Camera.CFrame:Lerp(targetCF, States.AimbotSmoothness)
+                end
+            end
+        end)
+    else
+        if AimbotConnection then
+            AimbotConnection:Disconnect()
+            AimbotConnection = nil
+        end
+    end
+end)
+
+CreateSlider("Aimbot FOV", 30, 300, 100, function(val)
+    States.AimbotFOV = val
+end)
+
+CreateSlider("Aimbot Smooth", 1, 100, 50, function(val)
+    States.AimbotSmoothness = val / 100
 end)
 
 local killTargetDropdown = CreateDropdown("Kill Target", playerNames, function(selected)
@@ -1024,13 +1273,6 @@ CreateToggle("Chat Owner", function(enabled)
     States.ChatOwner = enabled
 end)
 
--- Chat spoof
-if TextChatService.ChatInputBarConfiguration then
-    local originalSend = TextChatService.MessageReceived
-    -- Note: Chat spoofing requires more complex implementation
-    -- This is a simplified version for testing purposes
-end
-
 -- ============================================
 -- CAR TESTS
 -- ============================================
@@ -1112,13 +1354,45 @@ local ammoTargetDropdown = CreateDropdown("Ammo Target", playerNames, function(s
     States.TargetPlayer = selected
 end)
 
-local AmmoConnection = nil
 CreateToggle("Ammo", function(enabled)
     States.AmmoActive = enabled
     if enabled then
         if AmmoConnection then AmmoConnection:Disconnect() end
+
+        -- Enable noclip for ammo
+        local ammoNoclipConn
+        ammoNoclipConn = RunService.Stepped:Connect(function()
+            if not States.AmmoActive then
+                ammoNoclipConn:Disconnect()
+                return
+            end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+
         AmmoConnection = RunService.RenderStepped:Connect(function()
-            if not States.AmmoActive then return end
+            if not States.AmmoActive then
+                if ammoNoclipConn then
+                    ammoNoclipConn:Disconnect()
+                end
+                -- Restore collision
+                local char = LocalPlayer.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                        end
+                    end
+                end
+                return
+            end
+
             if not States.TargetPlayer or States.TargetPlayer == "No Players" then return end
 
             local target = GetPlayerByName(States.TargetPlayer)
@@ -1129,23 +1403,45 @@ CreateToggle("Ammo", function(enabled)
             if not targetHead or not myChar then return end
 
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-            local myLowerTorso = myChar:FindFirstChild("LowerTorso")
-            local myUpperTorso = myChar:FindFirstChild("UpperTorso")
+            if not myHRP then return end
 
-            if myHRP and myLowerTorso then
-                local targetPos = targetHead.Position
-                local offset = Vector3.new(0, -0.5, 0.5)
-                myHRP.CFrame = CFrame.new(targetPos + offset) * CFrame.Angles(math.rad(90), 0, 0)
+            -- Get target head position and create vertical positioning
+            local headPos = targetHead.Position
+            local headCF = targetHead.CFrame
 
-                local time = tick()
-                local bob = math.sin(time * 5) * 0.1
-                myHRP.CFrame = myHRP.CFrame + Vector3.new(0, bob, 0)
-            end
+            -- Position: directly above target's head, facing down (vertical)
+            -- Character's lower torso/groin area aligns with target's mouth/head
+            local offset = headCF.UpVector * 1.2 + headCF.LookVector * 0.3
+            local targetPosition = headPos + offset
+
+            -- Create CFrame: facing downward toward the head
+            local lookAt = headPos
+            local newCF = CFrame.new(targetPosition, lookAt)
+
+            -- Apply bobbing motion (forward-backward along the vertical axis)
+            local time = tick()
+            local bobOffset = math.sin(time * 8) * 0.15
+            newCF = newCF * CFrame.new(0, bobOffset, 0)
+
+            myHRP.CFrame = newCF
+
+            -- Freeze character velocity to prevent falling
+            myHRP.Velocity = Vector3.new(0, 0, 0)
+            myHRP.RotVelocity = Vector3.new(0, 0, 0)
         end)
     else
         if AmmoConnection then
             AmmoConnection:Disconnect()
             AmmoConnection = nil
+        end
+        -- Restore collision when disabled
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
         end
     end
 end)
@@ -1157,17 +1453,9 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     States.Fly = false
     States.NoClip = false
     States.AmmoActive = false
+    States.Aimbot = false
 
-    for _, obj in pairs(ESPObjects) do
-        for _, v in pairs(obj) do
-            if typeof(v) == "Instance" then
-                v:Destroy()
-            elseif typeof(v) == "table" and v.Remove then
-                v:Remove()
-            end
-        end
-    end
-    ESPObjects = {}
+    ClearAllESP()
 
     if AdminBillboard then
         AdminBillboard:Destroy()
@@ -1190,6 +1478,10 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
         AmmoConnection:Disconnect()
         AmmoConnection = nil
     end
+    if AimbotConnection then
+        AimbotConnection:Disconnect()
+        AimbotConnection = nil
+    end
 end)
 
 -- ============================================
@@ -1205,10 +1497,10 @@ end)
 -- INITIAL NOTIFICATION
 -- ============================================
 local notif = Instance.new("TextLabel")
-notif.Size = UDim2.new(0, 300, 0, 40)
-notif.Position = UDim2.new(0.5, -150, 0, 20)
+notif.Size = UDim2.new(0, 320, 0, 40)
+notif.Position = UDim2.new(0.5, -160, 0, 20)
 notif.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-notif.Text = "Anti-Cheat Test Suite Loaded | Press INSERT to toggle"
+notif.Text = "Anti-Cheat Test Suite v2.0 Loaded | Press INSERT"
 notif.TextColor3 = Color3.fromRGB(220, 20, 60)
 notif.Font = Enum.Font.GothamBold
 notif.TextSize = 14
@@ -1222,4 +1514,4 @@ task.delay(5, function()
     notif:Destroy()
 end)
 
-print("Anti-Cheat Test Suite v1.0 loaded successfully")
+print("Anti-Cheat Test Suite v2.0 loaded successfully")
