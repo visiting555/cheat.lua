@@ -1429,31 +1429,30 @@ CreateToggle("Ammo", function(enabled)
             if not target or not target.Character then return end
 
             local targetHead = target.Character:FindFirstChild("Head")
-            local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
             local myChar = LocalPlayer.Character
-            if not targetHead or not targetHRP or not myChar then return end
+            if not targetHead or not myChar then return end
 
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
 
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
-            local hrpPos = targetHRP.Position
 
-            -- Character stands upright in front of target
-            -- Body vertical, facing target's face
-            -- Position: directly in front, upright stance
-            local forwardOffset = headCF.LookVector * 0.9
-            local standPosition = headPos + forwardOffset - Vector3.new(0, 1.5, 0)
+            -- Character crouches/sits in front of target
+            -- Groin/lower torso aligns with target's head/mouth
+            -- Hands on target's head
+            -- Position: crouched down so groin is at head level
+            local forwardOffset = headCF.LookVector * 0.5
+            local crouchPosition = headPos + forwardOffset - Vector3.new(0, 0.8, 0)
 
-            -- Face the target (look at target's face/mouth)
-            local lookAt = headPos + Vector3.new(0, -0.2, 0)
-            local baseCF = CFrame.new(standPosition, lookAt)
+            -- Face the target (look down at target's face)
+            local lookAt = headPos
+            local baseCF = CFrame.new(crouchPosition, lookAt)
 
-            -- Upright vertical stance (no tilt)
-            baseCF = baseCF * CFrame.Angles(0, 0, 0)
+            -- Crouched posture (leaning forward slightly)
+            baseCF = baseCF * CFrame.Angles(math.rad(35), 0, 0)
 
-            -- Gentle forward-backward motion (thrusting toward mouth)
+            -- Gentle forward-backward motion (thrusting)
             local time = tick()
             local bobOffset = math.sin(time * 12) * 0.15
             baseCF = baseCF * CFrame.new(0, 0, bobOffset)
@@ -1464,10 +1463,23 @@ CreateToggle("Ammo", function(enabled)
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
 
-            -- Keep upright
+            -- Set crouched posture
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
+            end
+
+            -- Position hands on target's head
+            local myLeftArm = myChar:FindFirstChild("LeftUpperArm")
+            local myRightArm = myChar:FindFirstChild("RightUpperArm")
+            local myLeftHand = myChar:FindFirstChild("LeftHand")
+            local myRightHand = myChar:FindFirstChild("RightHand")
+
+            if myLeftHand then
+                myLeftHand.CFrame = targetHead.CFrame * CFrame.new(-0.4, 0, 0.3)
+            end
+            if myRightHand then
+                myRightHand.CFrame = targetHead.CFrame * CFrame.new(0.4, 0, 0.3)
             end
         end)
     else
