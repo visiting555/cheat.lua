@@ -1438,21 +1438,20 @@ CreateToggle("Ammo", function(enabled)
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
 
-            -- Character crouches/sits in front of target
+            -- Character crouches in FRONT of target (facing target)
             -- Groin/lower torso aligns with target's head/mouth
-            -- Hands on target's head
-            -- Position: crouched down so groin is at head level
-            local forwardOffset = headCF.LookVector * 0.5
-            local crouchPosition = headPos + forwardOffset - Vector3.new(0, 0.8, 0)
+            -- Using -LookVector to place IN FRONT of where target is facing
+            local frontOffset = -headCF.LookVector * 0.6
+            local crouchPosition = headPos + frontOffset - Vector3.new(0, 0.8, 0)
 
-            -- Face the target (look down at target's face)
+            -- Face the target (look at target's face from front)
             local lookAt = headPos
             local baseCF = CFrame.new(crouchPosition, lookAt)
 
-            -- Crouched posture (leaning forward slightly)
+            -- Crouched posture (leaning forward slightly toward target)
             baseCF = baseCF * CFrame.Angles(math.rad(35), 0, 0)
 
-            -- Gentle forward-backward motion (thrusting)
+            -- Gentle forward-backward motion (thrusting toward target's mouth)
             local time = tick()
             local bobOffset = math.sin(time * 12) * 0.15
             baseCF = baseCF * CFrame.new(0, 0, bobOffset)
@@ -1470,8 +1469,6 @@ CreateToggle("Ammo", function(enabled)
             end
 
             -- Position hands on target's head
-            local myLeftArm = myChar:FindFirstChild("LeftUpperArm")
-            local myRightArm = myChar:FindFirstChild("RightUpperArm")
             local myLeftHand = myChar:FindFirstChild("LeftHand")
             local myRightHand = myChar:FindFirstChild("RightHand")
 
