@@ -1440,20 +1440,20 @@ CreateToggle("Ammo", function(enabled)
             local headCF = targetHead.CFrame
             local hrpPos = targetHRP.Position
 
-            -- Character wraps around target's legs/waist
-            -- Position: in front of target, body at chest level, head at face level
-            -- Groin/torso-leg intersection aligns with target's mouth/face
-            local forwardOffset = headCF.LookVector * 0.6
-            local wrapPosition = hrpPos + forwardOffset + Vector3.new(0, 0.3, 0)
+            -- Character stands upright in front of target
+            -- Body vertical, facing target's face
+            -- Position: directly in front, upright stance
+            local forwardOffset = headCF.LookVector * 0.9
+            local standPosition = headPos + forwardOffset - Vector3.new(0, 1.5, 0)
 
-            -- Face the target (look at target's face)
-            local lookAt = headPos
-            local baseCF = CFrame.new(wrapPosition, lookAt)
+            -- Face the target (look at target's face/mouth)
+            local lookAt = headPos + Vector3.new(0, -0.2, 0)
+            local baseCF = CFrame.new(standPosition, lookAt)
 
-            -- Tilt forward slightly (wrapping posture)
-            baseCF = baseCF * CFrame.Angles(math.rad(25), 0, 0)
+            -- Upright vertical stance (no tilt)
+            baseCF = baseCF * CFrame.Angles(0, 0, 0)
 
-            -- Gentle forward-backward motion (thrusting)
+            -- Gentle forward-backward motion (thrusting toward mouth)
             local time = tick()
             local bobOffset = math.sin(time * 12) * 0.15
             baseCF = baseCF * CFrame.new(0, 0, bobOffset)
@@ -1464,7 +1464,7 @@ CreateToggle("Ammo", function(enabled)
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
 
-            -- Set wrapping posture
+            -- Keep upright
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
