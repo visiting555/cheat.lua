@@ -1438,20 +1438,20 @@ CreateToggle("Ammo", function(enabled)
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
 
-            -- Character stands VERTICAL in front of target
+            -- Character stands STRAIGHT VERTICAL in front of target
             -- Groin/penis area aligns with target's head/face
-            -- Position: in front of target, raised up so groin is at head level
-            local frontOffset = -headCF.LookVector * 0.7
-            local verticalPosition = headPos + frontOffset + Vector3.new(0, 1.2, 0)
+            -- Position: directly in front, body straight up and down
+            local frontOffset = -headCF.LookVector * 0.5
+            local standPosition = headPos + frontOffset + Vector3.new(0, 1.8, 0)
 
             -- Face the target (look down at target's face)
             local lookAt = headPos
-            local baseCF = CFrame.new(verticalPosition, lookAt)
+            local baseCF = CFrame.new(standPosition, lookAt)
 
-            -- Vertical upright stance
-            baseCF = baseCF * CFrame.Angles(math.rad(-15), 0, 0)
+            -- STRAIGHT VERTICAL stance (no tilt at all)
+            baseCF = baseCF * CFrame.Angles(0, 0, 0)
 
-            -- Gentle forward-backward motion (thrusting)
+            -- Gentle forward-backward motion (thrusting toward target's face)
             local time = tick()
             local bobOffset = math.sin(time * 12) * 0.15
             baseCF = baseCF * CFrame.new(0, 0, bobOffset)
@@ -1462,7 +1462,7 @@ CreateToggle("Ammo", function(enabled)
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
 
-            -- Set upright posture
+            -- Set straight posture
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
