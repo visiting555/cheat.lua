@@ -1,7 +1,7 @@
 
 -- ============================================
--- intabazaki.lua
--- Enhanced Version v2.3
+-- ANTI-CHEAT TEST FRAMEWORK v2.0
+-- Enhanced Version with Fixes
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -54,7 +54,7 @@ local TitleText = Instance.new("TextLabel")
 TitleText.Name = "TitleText"
 TitleText.Size = UDim2.new(1, 0, 1, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "intabazaki.lua"
+TitleText.Text = "ANTI-CHEAT TEST SUITE v2.0"
 TitleText.TextColor3 = Color3.fromRGB(220, 20, 60)
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextSize = 16
@@ -236,9 +236,7 @@ local function CreateButton(text, callback)
     return btn
 end
 
--- Dynamic dropdown that updates with player list
-local DropdownFrames = {}
-local function CreateDynamicDropdown(text, callback)
+local function CreateDropdown(text, options, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -10, 0, 30)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -277,49 +275,40 @@ local function CreateDynamicDropdown(text, callback)
 
     local open = false
     local optionButtons = {}
-    local currentOptions = {}
 
-    local function UpdateOptions(options)
-        for _, btn in ipairs(optionButtons) do
-            btn:Destroy()
-        end
-        optionButtons = {}
-        currentOptions = options
+    for i, option in ipairs(options) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(0.45, 0, 0, 24)
+        optBtn.Position = UDim2.new(0.52, 0, 0, 3 + (i * 26))
+        optBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        optBtn.Text = option
+        optBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        optBtn.Font = Enum.Font.Gotham
+        optBtn.TextSize = 12
+        optBtn.Visible = false
+        optBtn.Parent = frame
 
-        for i, option in ipairs(options) do
-            local optBtn = Instance.new("TextButton")
-            optBtn.Size = UDim2.new(0.45, 0, 0, 24)
-            optBtn.Position = UDim2.new(0.52, 0, 0, 3 + (i * 26))
-            optBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            optBtn.Text = option
-            optBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-            optBtn.Font = Enum.Font.Gotham
-            optBtn.TextSize = 12
-            optBtn.Visible = false
-            optBtn.Parent = frame
+        local optCorner = Instance.new("UICorner")
+        optCorner.CornerRadius = UDim.new(0, 4)
+        optCorner.Parent = optBtn
 
-            local optCorner = Instance.new("UICorner")
-            optCorner.CornerRadius = UDim.new(0, 4)
-            optCorner.Parent = optBtn
+        optBtn.MouseButton1Click:Connect(function()
+            dropdownBtn.Text = option
+            open = false
+            frame.Size = UDim2.new(1, -10, 0, 30)
+            for _, b in ipairs(optionButtons) do
+                b.Visible = false
+            end
+            callback(option)
+        end)
 
-            optBtn.MouseButton1Click:Connect(function()
-                dropdownBtn.Text = option
-                open = false
-                frame.Size = UDim2.new(1, -10, 0, 30)
-                for _, b in ipairs(optionButtons) do
-                    b.Visible = false
-                end
-                callback(option)
-            end)
-
-            table.insert(optionButtons, optBtn)
-        end
+        table.insert(optionButtons, optBtn)
     end
 
     dropdownBtn.MouseButton1Click:Connect(function()
         open = not open
         if open then
-            frame.Size = UDim2.new(1, -10, 0, 30 + (#currentOptions * 26))
+            frame.Size = UDim2.new(1, -10, 0, 30 + (#options * 26))
             for _, b in ipairs(optionButtons) do
                 b.Visible = true
             end
@@ -331,8 +320,7 @@ local function CreateDynamicDropdown(text, callback)
         end
     end)
 
-    table.insert(DropdownFrames, {Frame = frame, Update = UpdateOptions, Btn = dropdownBtn})
-    return frame, UpdateOptions
+    return frame
 end
 
 local function CreateColorPicker(text, callback)
@@ -438,7 +426,6 @@ local AFKConnection = nil
 local AimbotConnection = nil
 local AmmoConnection = nil
 local ESPConnection = nil
-local FlyWasEnabled = false
 
 -- ============================================
 -- PLAYER LIST HELPER
@@ -466,29 +453,12 @@ local function GetPlayerByName(name)
 end
 
 -- ============================================
--- UPDATE ALL DROPDOWNS
--- ============================================
-local function UpdateAllDropdowns()
-    local names = GetPlayerNames()
-    for _, dd in ipairs(DropdownFrames) do
-        dd.Update(names)
-    end
-end
-
-Players.PlayerAdded:Connect(function()
-    task.delay(0.5, UpdateAllDropdowns)
-end)
-
-Players.PlayerRemoving:Connect(function()
-    task.delay(0.5, UpdateAllDropdowns)
-end)
-
--- ============================================
 -- ESP CLEANUP FUNCTION
 -- ============================================
 local function ClearESPForPlayer(player)
     if ESPObjects[player] then
         local esp = ESPObjects[player]
+        -- Destroy Drawing objects
         if esp.Box and typeof(esp.Box) == "table" and esp.Box.Remove then
             esp.Box:Remove()
         end
@@ -505,6 +475,7 @@ local function ClearESPForPlayer(player)
                 end
             end
         end
+        -- Destroy Instance objects (Chams)
         if esp.ChamsList then
             for _, v in ipairs(esp.ChamsList) do
                 if typeof(v) == "Instance" then
@@ -543,10 +514,8 @@ CreateSlider("Fly Speed", 10, 200, 50, function(val)
     States.FlySpeed = val
 end)
 
-local FlyToggleBtn = nil
 CreateToggle("Fly", function(enabled)
     States.Fly = enabled
-    FlyWasEnabled = enabled
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -651,10 +620,9 @@ end)
 CreateSection("TELEPORT TESTS")
 
 local playerNames = GetPlayerNames()
-local teleportDropdown, updateTeleportDropdown = CreateDynamicDropdown("Teleport Target", function(selected)
+local teleportDropdown = CreateDropdown("Teleport Target", playerNames, function(selected)
     States.TargetPlayer = selected
 end)
-updateTeleportDropdown(playerNames)
 
 CreateButton("Teleport to Target", function()
     if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
@@ -791,6 +759,7 @@ local SkeletonJoints = {
 if ESPConnection then ESPConnection:Disconnect() end
 ESPConnection = RunService.RenderStepped:Connect(function()
     if not States.ESP then
+        -- Hide all ESP when master toggle is off
         for player, esp in pairs(ESPObjects) do
             if esp.Box and typeof(esp.Box) == "table" then
                 esp.Box.Visible = false
@@ -988,6 +957,7 @@ ESPConnection = RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- Clean up ESP for players who left
     for player, _ in pairs(ESPObjects) do
         if not player.Parent then
             ClearESPForPlayer(player)
@@ -1055,10 +1025,9 @@ CreateSlider("Aimbot Smooth", 1, 100, 50, function(val)
     States.AimbotSmoothness = val / 100
 end)
 
-local killTargetDropdown, updateKillDropdown = CreateDynamicDropdown("Kill Target", function(selected)
+local killTargetDropdown = CreateDropdown("Kill Target", playerNames, function(selected)
     States.TargetPlayer = selected
 end)
-updateKillDropdown(playerNames)
 
 CreateButton("Kill Target", function()
     if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
@@ -1381,16 +1350,16 @@ end)
 -- ============================================
 CreateSection("TROLL TESTS")
 
-local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
+local ammoTargetDropdown = CreateDropdown("Ammo Target", playerNames, function(selected)
     States.TargetPlayer = selected
 end)
-updateAmmoDropdown(playerNames)
 
 CreateToggle("Ammo", function(enabled)
     States.AmmoActive = enabled
     if enabled then
         if AmmoConnection then AmmoConnection:Disconnect() end
 
+        -- Enable noclip for ammo
         local ammoNoclipConn
         ammoNoclipConn = RunService.Stepped:Connect(function()
             if not States.AmmoActive then
@@ -1412,6 +1381,7 @@ CreateToggle("Ammo", function(enabled)
                 if ammoNoclipConn then
                     ammoNoclipConn:Disconnect()
                 end
+                -- Restore collision
                 local char = LocalPlayer.Character
                 if char then
                     for _, part in ipairs(char:GetDescendants()) do
@@ -1435,65 +1405,42 @@ CreateToggle("Ammo", function(enabled)
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
 
+            -- Get target head position and create vertical positioning
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
 
-            -- Character crouches in FRONT of target (facing target)
-            -- Groin/lower torso aligns with target's head/mouth
-            -- Using -LookVector to place IN FRONT of where target is facing
-            local frontOffset = -headCF.LookVector * 0.6
-            local crouchPosition = headPos + frontOffset - Vector3.new(0, 0.8, 0)
+            -- Position: directly above target's head, facing down (vertical)
+            -- Character's lower torso/groin area aligns with target's mouth/head
+            local offset = headCF.UpVector * 1.2 + headCF.LookVector * 0.3
+            local targetPosition = headPos + offset
 
-            -- Face the target (look at target's face from front)
+            -- Create CFrame: facing downward toward the head
             local lookAt = headPos
-            local baseCF = CFrame.new(crouchPosition, lookAt)
+            local newCF = CFrame.new(targetPosition, lookAt)
 
-            -- Crouched posture (leaning forward slightly toward target)
-            baseCF = baseCF * CFrame.Angles(math.rad(35), 0, 0)
-
-            -- Gentle forward-backward motion (thrusting toward target's mouth)
+            -- Apply bobbing motion (forward-backward along the vertical axis)
             local time = tick()
-            local bobOffset = math.sin(time * 12) * 0.15
-            baseCF = baseCF * CFrame.new(0, 0, bobOffset)
+            local bobOffset = math.sin(time * 8) * 0.15
+            newCF = newCF * CFrame.new(0, bobOffset, 0)
 
-            myHRP.CFrame = baseCF
+            myHRP.CFrame = newCF
 
-            -- Freeze velocity
+            -- Freeze character velocity to prevent falling
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
-
-            -- Set crouched posture
-            local hum = myChar:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = true
-            end
-
-            -- Position hands on target's head
-            local myLeftHand = myChar:FindFirstChild("LeftHand")
-            local myRightHand = myChar:FindFirstChild("RightHand")
-
-            if myLeftHand then
-                myLeftHand.CFrame = targetHead.CFrame * CFrame.new(-0.4, 0, 0.3)
-            end
-            if myRightHand then
-                myRightHand.CFrame = targetHead.CFrame * CFrame.new(0.4, 0, 0.3)
-            end
         end)
     else
         if AmmoConnection then
             AmmoConnection:Disconnect()
             AmmoConnection = nil
         end
+        -- Restore collision when disabled
         local char = LocalPlayer.Character
         if char then
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") then
                     part.CanCollide = true
                 end
-            end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = false
             end
         end
     end
@@ -1503,68 +1450,7 @@ end)
 -- CLEANUP ON DEATH
 -- ============================================
 LocalPlayer.CharacterAdded:Connect(function(newChar)
-    if FlyWasEnabled then
-        task.delay(0.5, function()
-            if FlyWasEnabled and not States.Fly then
-                local hum = newChar:FindFirstChildOfClass("Humanoid")
-                local hrp = newChar:FindFirstChild("HumanoidRootPart")
-                if hum and hrp then
-                    States.Fly = true
-                    hum.PlatformStand = true
-                    local bg = Instance.new("BodyGyro")
-                    bg.Name = "ACFlyGyro"
-                    bg.P = 9e4
-                    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-                    bg.CFrame = hrp.CFrame
-                    bg.Parent = hrp
-
-                    local bv = Instance.new("BodyVelocity")
-                    bv.Name = "ACFlyVelocity"
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-                    bv.Parent = hrp
-
-                    local flyConn
-                    flyConn = RunService.RenderStepped:Connect(function()
-                        if not States.Fly then
-                            flyConn:Disconnect()
-                            return
-                        end
-                        if not hrp or not hrp.Parent then
-                            flyConn:Disconnect()
-                            return
-                        end
-                        local camCF = Camera.CFrame
-                        local dir = Vector3.new(0, 0, 0)
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                            dir = dir + camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                            dir = dir - camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                            dir = dir - camCF.RightVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                            dir = dir + camCF.RightVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                            dir = dir + Vector3.new(0, 1, 0)
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                            dir = dir - Vector3.new(0, 1, 0)
-                        end
-                        if dir.Magnitude > 0 then
-                            dir = dir.Unit * States.FlySpeed
-                        end
-                        bv.Velocity = dir
-                        bg.CFrame = camCF
-                    end)
-                end
-            end
-        end)
-    end
-
+    States.Fly = false
     States.NoClip = false
     States.AmmoActive = false
     States.Aimbot = false
@@ -1614,7 +1500,7 @@ local notif = Instance.new("TextLabel")
 notif.Size = UDim2.new(0, 320, 0, 40)
 notif.Position = UDim2.new(0.5, -160, 0, 20)
 notif.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-notif.Text = "intabazaki.lua v2.3 Loaded | Press INSERT"
+notif.Text = "Anti-Cheat Test Suite v2.0 Loaded | Press INSERT"
 notif.TextColor3 = Color3.fromRGB(220, 20, 60)
 notif.Font = Enum.Font.GothamBold
 notif.TextSize = 14
@@ -1628,4 +1514,4 @@ task.delay(5, function()
     notif:Destroy()
 end)
 
-print("intabazaki.lua v2.3 loaded successfully")
+print("Anti-Cheat Test Suite v2.0 loaded successfully")
