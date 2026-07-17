@@ -1,7 +1,8 @@
 
+cheat_script = r"""
 -- ============================================
 -- intabazaki.lua
--- Enhanced Version v2.3
+-- Enhanced Version v2.1
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -96,11 +97,11 @@ local function CreateToggle(text, callback)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     frame.BorderSizePixel = 0
     frame.Parent = ScrollFrame
-
+    
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
-
+    
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.7, 0, 1, 0)
     label.BackgroundTransparency = 1
@@ -111,7 +112,7 @@ local function CreateToggle(text, callback)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Position = UDim2.new(0, 10, 0, 0)
     label.Parent = frame
-
+    
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0, 50, 0, 22)
     toggleBtn.Position = UDim2.new(1, -60, 0.5, -11)
@@ -121,11 +122,11 @@ local function CreateToggle(text, callback)
     toggleBtn.Font = Enum.Font.GothamBold
     toggleBtn.TextSize = 11
     toggleBtn.Parent = frame
-
+    
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 4)
     btnCorner.Parent = toggleBtn
-
+    
     local enabled = false
     toggleBtn.MouseButton1Click:Connect(function()
         enabled = not enabled
@@ -138,7 +139,7 @@ local function CreateToggle(text, callback)
         end
         callback(enabled)
     end)
-
+    
     return frame, toggleBtn
 end
 
@@ -148,11 +149,11 @@ local function CreateSlider(text, min, max, default, callback)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     frame.BorderSizePixel = 0
     frame.Parent = ScrollFrame
-
+    
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
-
+    
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -10, 0, 20)
     label.BackgroundTransparency = 1
@@ -163,30 +164,30 @@ local function CreateSlider(text, min, max, default, callback)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Position = UDim2.new(0, 10, 0, 2)
     label.Parent = frame
-
+    
     local sliderBg = Instance.new("Frame")
     sliderBg.Size = UDim2.new(1, -20, 0, 8)
     sliderBg.Position = UDim2.new(0, 10, 0, 30)
     sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     sliderBg.BorderSizePixel = 0
     sliderBg.Parent = frame
-
+    
     local sliderCorner = Instance.new("UICorner")
     sliderCorner.CornerRadius = UDim.new(0, 4)
     sliderCorner.Parent = sliderBg
-
+    
     local sliderFill = Instance.new("Frame")
     sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     sliderFill.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
     sliderFill.BorderSizePixel = 0
     sliderFill.Parent = sliderBg
-
+    
     local fillCorner = Instance.new("UICorner")
     fillCorner.CornerRadius = UDim.new(0, 4)
     fillCorner.Parent = sliderFill
-
+    
     local dragging = false
-
+    
     local function updateSlider(input)
         local pos = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
         local value = math.floor(min + (pos * (max - min)))
@@ -194,26 +195,26 @@ local function CreateSlider(text, min, max, default, callback)
         label.Text = text .. ": " .. tostring(value)
         callback(value)
     end
-
+    
     sliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             updateSlider(input)
         end
     end)
-
+    
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             updateSlider(input)
         end
     end)
-
+    
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
-
+    
     return frame
 end
 
@@ -227,29 +228,27 @@ local function CreateButton(text, callback)
     btn.TextSize = 13
     btn.BorderSizePixel = 0
     btn.Parent = ScrollFrame
-
+    
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = btn
-
+    
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- Dynamic dropdown that updates with player list
-local DropdownFrames = {}
-local function CreateDynamicDropdown(text, callback)
+local function CreateDropdown(text, options, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -10, 0, 30)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     frame.BorderSizePixel = 0
     frame.ClipsDescendants = true
     frame.Parent = ScrollFrame
-
+    
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
-
+    
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.5, 0, 0, 30)
     label.BackgroundTransparency = 1
@@ -260,7 +259,7 @@ local function CreateDynamicDropdown(text, callback)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Position = UDim2.new(0, 10, 0, 0)
     label.Parent = frame
-
+    
     local dropdownBtn = Instance.new("TextButton")
     dropdownBtn.Size = UDim2.new(0.45, 0, 0, 24)
     dropdownBtn.Position = UDim2.new(0.52, 0, 0, 3)
@@ -270,56 +269,47 @@ local function CreateDynamicDropdown(text, callback)
     dropdownBtn.Font = Enum.Font.Gotham
     dropdownBtn.TextSize = 12
     dropdownBtn.Parent = frame
-
+    
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 4)
     btnCorner.Parent = dropdownBtn
-
+    
     local open = false
     local optionButtons = {}
-    local currentOptions = {}
-
-    local function UpdateOptions(options)
-        for _, btn in ipairs(optionButtons) do
-            btn:Destroy()
-        end
-        optionButtons = {}
-        currentOptions = options
-
-        for i, option in ipairs(options) do
-            local optBtn = Instance.new("TextButton")
-            optBtn.Size = UDim2.new(0.45, 0, 0, 24)
-            optBtn.Position = UDim2.new(0.52, 0, 0, 3 + (i * 26))
-            optBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            optBtn.Text = option
-            optBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-            optBtn.Font = Enum.Font.Gotham
-            optBtn.TextSize = 12
-            optBtn.Visible = false
-            optBtn.Parent = frame
-
-            local optCorner = Instance.new("UICorner")
-            optCorner.CornerRadius = UDim.new(0, 4)
-            optCorner.Parent = optBtn
-
-            optBtn.MouseButton1Click:Connect(function()
-                dropdownBtn.Text = option
-                open = false
-                frame.Size = UDim2.new(1, -10, 0, 30)
-                for _, b in ipairs(optionButtons) do
-                    b.Visible = false
-                end
-                callback(option)
-            end)
-
-            table.insert(optionButtons, optBtn)
-        end
+    
+    for i, option in ipairs(options) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(0.45, 0, 0, 24)
+        optBtn.Position = UDim2.new(0.52, 0, 0, 3 + (i * 26))
+        optBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        optBtn.Text = option
+        optBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        optBtn.Font = Enum.Font.Gotham
+        optBtn.TextSize = 12
+        optBtn.Visible = false
+        optBtn.Parent = frame
+        
+        local optCorner = Instance.new("UICorner")
+        optCorner.CornerRadius = UDim.new(0, 4)
+        optCorner.Parent = optBtn
+        
+        optBtn.MouseButton1Click:Connect(function()
+            dropdownBtn.Text = option
+            open = false
+            frame.Size = UDim2.new(1, -10, 0, 30)
+            for _, b in ipairs(optionButtons) do
+                b.Visible = false
+            end
+            callback(option)
+        end)
+        
+        table.insert(optionButtons, optBtn)
     end
-
+    
     dropdownBtn.MouseButton1Click:Connect(function()
         open = not open
         if open then
-            frame.Size = UDim2.new(1, -10, 0, 30 + (#currentOptions * 26))
+            frame.Size = UDim2.new(1, -10, 0, 30 + (#options * 26))
             for _, b in ipairs(optionButtons) do
                 b.Visible = true
             end
@@ -330,9 +320,8 @@ local function CreateDynamicDropdown(text, callback)
             end
         end
     end)
-
-    table.insert(DropdownFrames, {Frame = frame, Update = UpdateOptions, Btn = dropdownBtn})
-    return frame, UpdateOptions
+    
+    return frame
 end
 
 local function CreateColorPicker(text, callback)
@@ -341,11 +330,11 @@ local function CreateColorPicker(text, callback)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     frame.BorderSizePixel = 0
     frame.Parent = ScrollFrame
-
+    
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
-
+    
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.5, 0, 1, 0)
     label.BackgroundTransparency = 1
@@ -356,18 +345,18 @@ local function CreateColorPicker(text, callback)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Position = UDim2.new(0, 10, 0, 0)
     label.Parent = frame
-
+    
     local colorBtn = Instance.new("TextButton")
     colorBtn.Size = UDim2.new(0, 60, 0, 24)
     colorBtn.Position = UDim2.new(1, -70, 0.5, -12)
     colorBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     colorBtn.Text = ""
     colorBtn.Parent = frame
-
+    
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 4)
     btnCorner.Parent = colorBtn
-
+    
     local colors = {
         Color3.fromRGB(255, 0, 0),
         Color3.fromRGB(0, 255, 0),
@@ -381,13 +370,13 @@ local function CreateColorPicker(text, callback)
         Color3.fromRGB(128, 0, 128)
     }
     local colorIndex = 1
-
+    
     colorBtn.MouseButton1Click:Connect(function()
         colorIndex = colorIndex % #colors + 1
         colorBtn.BackgroundColor3 = colors[colorIndex]
         callback(colors[colorIndex])
     end)
-
+    
     return frame
 end
 
@@ -438,7 +427,6 @@ local AFKConnection = nil
 local AimbotConnection = nil
 local AmmoConnection = nil
 local ESPConnection = nil
-local FlyWasEnabled = false
 
 -- ============================================
 -- PLAYER LIST HELPER
@@ -464,24 +452,6 @@ local function GetPlayerByName(name)
     end
     return nil
 end
-
--- ============================================
--- UPDATE ALL DROPDOWNS
--- ============================================
-local function UpdateAllDropdowns()
-    local names = GetPlayerNames()
-    for _, dd in ipairs(DropdownFrames) do
-        dd.Update(names)
-    end
-end
-
-Players.PlayerAdded:Connect(function()
-    task.delay(0.5, UpdateAllDropdowns)
-end)
-
-Players.PlayerRemoving:Connect(function()
-    task.delay(0.5, UpdateAllDropdowns)
-end)
 
 -- ============================================
 -- ESP CLEANUP FUNCTION
@@ -543,16 +513,14 @@ CreateSlider("Fly Speed", 10, 200, 50, function(val)
     States.FlySpeed = val
 end)
 
-local FlyToggleBtn = nil
 CreateToggle("Fly", function(enabled)
     States.Fly = enabled
-    FlyWasEnabled = enabled
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
-
+    
     if enabled then
         hum.PlatformStand = true
         local bg = Instance.new("BodyGyro")
@@ -561,13 +529,13 @@ CreateToggle("Fly", function(enabled)
         bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
         bg.CFrame = hrp.CFrame
         bg.Parent = hrp
-
+        
         local bv = Instance.new("BodyVelocity")
         bv.Name = "ACFlyVelocity"
         bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
         bv.Parent = hrp
-
+        
         local flyConn
         flyConn = RunService.RenderStepped:Connect(function()
             if not States.Fly then
@@ -618,7 +586,7 @@ CreateToggle("NoClip", function(enabled)
     States.NoClip = enabled
     local char = LocalPlayer.Character
     if not char then return end
-
+    
     if enabled then
         local noclipConn
         noclipConn = RunService.Stepped:Connect(function()
@@ -651,10 +619,9 @@ end)
 CreateSection("TELEPORT TESTS")
 
 local playerNames = GetPlayerNames()
-local teleportDropdown, updateTeleportDropdown = CreateDynamicDropdown("Teleport Target", function(selected)
+local teleportDropdown = CreateDropdown("Teleport Target", playerNames, function(selected)
     States.TargetPlayer = selected
 end)
-updateTeleportDropdown(playerNames)
 
 CreateButton("Teleport to Target", function()
     if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
@@ -811,27 +778,27 @@ ESPConnection = RunService.RenderStepped:Connect(function()
         end
         return
     end
-
+    
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LocalPlayer then continue end
         if not p.Character then
             ClearESPForPlayer(p)
             continue
         end
-
+        
         local char = p.Character
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then
             ClearESPForPlayer(p)
             continue
         end
-
+        
         if not ESPObjects[p] then
             ESPObjects[p] = {}
         end
-
+        
         local esp = ESPObjects[p]
-
+        
         -- Chams ESP
         if States.ESPChams then
             if not esp.ChamsList then
@@ -865,7 +832,7 @@ ESPConnection = RunService.RenderStepped:Connect(function()
                 esp.ChamsList = nil
             end
         end
-
+        
         -- Box ESP
         if States.ESPBox then
             if not esp.Box then
@@ -898,7 +865,7 @@ ESPConnection = RunService.RenderStepped:Connect(function()
         elseif esp.Box then
             esp.Box.Visible = false
         end
-
+        
         -- Name ESP
         if States.ESPName then
             if not esp.Name then
@@ -927,7 +894,7 @@ ESPConnection = RunService.RenderStepped:Connect(function()
         elseif esp.Name then
             esp.Name.Visible = false
         end
-
+        
         -- Skeleton ESP
         if States.ESPSkeleton then
             if not esp.Skeleton then
@@ -964,7 +931,7 @@ ESPConnection = RunService.RenderStepped:Connect(function()
                 line.Visible = false
             end
         end
-
+        
         -- Tracer ESP
         if States.ESPTracer then
             if not esp.Tracer then
@@ -987,7 +954,7 @@ ESPConnection = RunService.RenderStepped:Connect(function()
             esp.Tracer.Visible = false
         end
     end
-
+    
     for player, _ in pairs(ESPObjects) do
         if not player.Parent then
             ClearESPForPlayer(player)
@@ -1010,17 +977,17 @@ CreateToggle("Aimbot", function(enabled)
         if AimbotConnection then AimbotConnection:Disconnect() end
         AimbotConnection = RunService.RenderStepped:Connect(function()
             if not States.Aimbot then return end
-
+            
             local closestPlayer = nil
             local closestDistance = States.AimbotFOV
             local mousePos = UserInputService:GetMouseLocation()
-
+            
             for _, p in ipairs(Players:GetPlayers()) do
                 if p == LocalPlayer then continue end
                 if not p.Character then continue end
                 local head = p.Character:FindFirstChild("Head")
                 if not head then continue end
-
+                
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
@@ -1030,7 +997,7 @@ CreateToggle("Aimbot", function(enabled)
                     end
                 end
             end
-
+            
             if closestPlayer and closestPlayer.Character then
                 local head = closestPlayer.Character:FindFirstChild("Head")
                 if head then
@@ -1055,10 +1022,9 @@ CreateSlider("Aimbot Smooth", 1, 100, 50, function(val)
     States.AimbotSmoothness = val / 100
 end)
 
-local killTargetDropdown, updateKillDropdown = CreateDynamicDropdown("Kill Target", function(selected)
+local killTargetDropdown = CreateDropdown("Kill Target", playerNames, function(selected)
     States.TargetPlayer = selected
 end)
-updateKillDropdown(playerNames)
 
 CreateButton("Kill Target", function()
     if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
@@ -1122,7 +1088,7 @@ CreateToggle("Show FPS", function(enabled)
             FPSLabel.Parent = ScreenGui
         end
         FPSLabel.Visible = true
-
+        
         local lastTime = tick()
         local frameCount = 0
         RunService.RenderStepped:Connect(function()
@@ -1224,7 +1190,7 @@ CreateToggle("Fake Admin", function(enabled)
                 AdminBillboard.StudsOffset = Vector3.new(0, 2.5, 0)
                 AdminBillboard.AlwaysOnTop = true
                 AdminBillboard.Parent = head
-
+                
                 local label = Instance.new("TextLabel")
                 label.Size = UDim2.new(1, 0, 1, 0)
                 label.BackgroundTransparency = 1
@@ -1267,7 +1233,7 @@ CreateToggle("Fake Owner", function(enabled)
                 OwnerBillboard.StudsOffset = Vector3.new(0, 2.5, 0)
                 OwnerBillboard.AlwaysOnTop = true
                 OwnerBillboard.Parent = head
-
+                
                 local label = Instance.new("TextLabel")
                 label.Size = UDim2.new(1, 0, 1, 0)
                 label.BackgroundTransparency = 1
@@ -1381,16 +1347,15 @@ end)
 -- ============================================
 CreateSection("TROLL TESTS")
 
-local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
+local ammoTargetDropdown = CreateDropdown("Ammo Target", playerNames, function(selected)
     States.TargetPlayer = selected
 end)
-updateAmmoDropdown(playerNames)
 
 CreateToggle("Ammo", function(enabled)
     States.AmmoActive = enabled
     if enabled then
         if AmmoConnection then AmmoConnection:Disconnect() end
-
+        
         local ammoNoclipConn
         ammoNoclipConn = RunService.Stepped:Connect(function()
             if not States.AmmoActive then
@@ -1406,7 +1371,7 @@ CreateToggle("Ammo", function(enabled)
                 end
             end
         end)
-
+        
         AmmoConnection = RunService.RenderStepped:Connect(function()
             if not States.AmmoActive then
                 if ammoNoclipConn then
@@ -1422,62 +1387,41 @@ CreateToggle("Ammo", function(enabled)
                 end
                 return
             end
-
+            
             if not States.TargetPlayer or States.TargetPlayer == "No Players" then return end
-
+            
             local target = GetPlayerByName(States.TargetPlayer)
             if not target or not target.Character then return end
-
+            
             local targetHead = target.Character:FindFirstChild("Head")
             local myChar = LocalPlayer.Character
             if not targetHead or not myChar then return end
-
+            
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
-
+            
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
-
-            -- Character crouches in FRONT of target (facing target)
-            -- Groin/lower torso aligns with target's head/mouth
-            -- Using -LookVector to place IN FRONT of where target is facing
-            local frontOffset = -headCF.LookVector * 0.6
-            local crouchPosition = headPos + frontOffset - Vector3.new(0, 0.8, 0)
-
-            -- Face the target (look at target's face from front)
+            
+            -- Position in FRONT of target (face to face)
+            -- Character stands in front of target, facing target's face
+            local forwardOffset = headCF.LookVector * 1.2
+            local targetPosition = headPos + forwardOffset
+            
+            -- Face the target (look at target's head)
             local lookAt = headPos
-            local baseCF = CFrame.new(crouchPosition, lookAt)
-
-            -- Crouched posture (leaning forward slightly toward target)
-            baseCF = baseCF * CFrame.Angles(math.rad(35), 0, 0)
-
-            -- Gentle forward-backward motion (thrusting toward target's mouth)
+            local newCF = CFrame.new(targetPosition, lookAt)
+            
+            -- Apply gentle forward-backward bobbing motion
             local time = tick()
-            local bobOffset = math.sin(time * 12) * 0.15
-            baseCF = baseCF * CFrame.new(0, 0, bobOffset)
-
-            myHRP.CFrame = baseCF
-
-            -- Freeze velocity
+            local bobOffset = math.sin(time * 8) * 0.12
+            newCF = newCF * CFrame.new(0, 0, bobOffset)
+            
+            myHRP.CFrame = newCF
+            
+            -- Freeze velocity to prevent falling or sliding
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
-
-            -- Set crouched posture
-            local hum = myChar:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = true
-            end
-
-            -- Position hands on target's head
-            local myLeftHand = myChar:FindFirstChild("LeftHand")
-            local myRightHand = myChar:FindFirstChild("RightHand")
-
-            if myLeftHand then
-                myLeftHand.CFrame = targetHead.CFrame * CFrame.new(-0.4, 0, 0.3)
-            end
-            if myRightHand then
-                myRightHand.CFrame = targetHead.CFrame * CFrame.new(0.4, 0, 0.3)
-            end
         end)
     else
         if AmmoConnection then
@@ -1491,10 +1435,6 @@ CreateToggle("Ammo", function(enabled)
                     part.CanCollide = true
                 end
             end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = false
-            end
         end
     end
 end)
@@ -1503,74 +1443,13 @@ end)
 -- CLEANUP ON DEATH
 -- ============================================
 LocalPlayer.CharacterAdded:Connect(function(newChar)
-    if FlyWasEnabled then
-        task.delay(0.5, function()
-            if FlyWasEnabled and not States.Fly then
-                local hum = newChar:FindFirstChildOfClass("Humanoid")
-                local hrp = newChar:FindFirstChild("HumanoidRootPart")
-                if hum and hrp then
-                    States.Fly = true
-                    hum.PlatformStand = true
-                    local bg = Instance.new("BodyGyro")
-                    bg.Name = "ACFlyGyro"
-                    bg.P = 9e4
-                    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-                    bg.CFrame = hrp.CFrame
-                    bg.Parent = hrp
-
-                    local bv = Instance.new("BodyVelocity")
-                    bv.Name = "ACFlyVelocity"
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-                    bv.Parent = hrp
-
-                    local flyConn
-                    flyConn = RunService.RenderStepped:Connect(function()
-                        if not States.Fly then
-                            flyConn:Disconnect()
-                            return
-                        end
-                        if not hrp or not hrp.Parent then
-                            flyConn:Disconnect()
-                            return
-                        end
-                        local camCF = Camera.CFrame
-                        local dir = Vector3.new(0, 0, 0)
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                            dir = dir + camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                            dir = dir - camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                            dir = dir - camCF.RightVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                            dir = dir + camCF.RightVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                            dir = dir + Vector3.new(0, 1, 0)
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                            dir = dir - Vector3.new(0, 1, 0)
-                        end
-                        if dir.Magnitude > 0 then
-                            dir = dir.Unit * States.FlySpeed
-                        end
-                        bv.Velocity = dir
-                        bg.CFrame = camCF
-                    end)
-                end
-            end
-        end)
-    end
-
+    States.Fly = false
     States.NoClip = false
     States.AmmoActive = false
     States.Aimbot = false
-
+    
     ClearAllESP()
-
+    
     if AdminBillboard then
         AdminBillboard:Destroy()
         AdminBillboard = nil
@@ -1579,7 +1458,7 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
         OwnerBillboard:Destroy()
         OwnerBillboard = nil
     end
-
+    
     if RainbowConnection then
         RainbowConnection:Disconnect()
         RainbowConnection = nil
@@ -1614,7 +1493,7 @@ local notif = Instance.new("TextLabel")
 notif.Size = UDim2.new(0, 320, 0, 40)
 notif.Position = UDim2.new(0.5, -160, 0, 20)
 notif.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-notif.Text = "intabazaki.lua v2.3 Loaded | Press INSERT"
+notif.Text = "intabazaki.lua v2.1 Loaded | Press INSERT"
 notif.TextColor3 = Color3.fromRGB(220, 20, 60)
 notif.Font = Enum.Font.GothamBold
 notif.TextSize = 14
@@ -1628,4 +1507,12 @@ task.delay(5, function()
     notif:Destroy()
 end)
 
-print("intabazaki.lua v2.3 loaded successfully")
+print("intabazaki.lua v2.1 loaded successfully")
+"""
+
+with open('/mnt/agents/output/intabazaki.lua', 'w', encoding='utf-8') as f:
+    f.write(cheat_script)
+
+print("Dosya basariyla yazildi!")
+print(f"Toplam satir: {len(cheat_script.splitlines())}")
+print(f"Toplam karakter: {len(cheat_script)}")
