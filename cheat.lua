@@ -1,7 +1,7 @@
 
 -- ============================================
--- ANTI-CHEAT TEST FRAMEWORK v2.0
--- Enhanced Version with Fixes
+-- intabazaki.lua
+-- Enhanced Version v2.1
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -54,7 +54,7 @@ local TitleText = Instance.new("TextLabel")
 TitleText.Name = "TitleText"
 TitleText.Size = UDim2.new(1, 0, 1, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "ANTI-CHEAT TEST SUITE v2.0"
+TitleText.Text = "intabazaki.lua"
 TitleText.TextColor3 = Color3.fromRGB(220, 20, 60)
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextSize = 16
@@ -458,7 +458,6 @@ end
 local function ClearESPForPlayer(player)
     if ESPObjects[player] then
         local esp = ESPObjects[player]
-        -- Destroy Drawing objects
         if esp.Box and typeof(esp.Box) == "table" and esp.Box.Remove then
             esp.Box:Remove()
         end
@@ -475,7 +474,6 @@ local function ClearESPForPlayer(player)
                 end
             end
         end
-        -- Destroy Instance objects (Chams)
         if esp.ChamsList then
             for _, v in ipairs(esp.ChamsList) do
                 if typeof(v) == "Instance" then
@@ -759,7 +757,6 @@ local SkeletonJoints = {
 if ESPConnection then ESPConnection:Disconnect() end
 ESPConnection = RunService.RenderStepped:Connect(function()
     if not States.ESP then
-        -- Hide all ESP when master toggle is off
         for player, esp in pairs(ESPObjects) do
             if esp.Box and typeof(esp.Box) == "table" then
                 esp.Box.Visible = false
@@ -957,7 +954,6 @@ ESPConnection = RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Clean up ESP for players who left
     for player, _ in pairs(ESPObjects) do
         if not player.Parent then
             ClearESPForPlayer(player)
@@ -1359,7 +1355,6 @@ CreateToggle("Ammo", function(enabled)
     if enabled then
         if AmmoConnection then AmmoConnection:Disconnect() end
 
-        -- Enable noclip for ammo
         local ammoNoclipConn
         ammoNoclipConn = RunService.Stepped:Connect(function()
             if not States.AmmoActive then
@@ -1381,7 +1376,6 @@ CreateToggle("Ammo", function(enabled)
                 if ammoNoclipConn then
                     ammoNoclipConn:Disconnect()
                 end
-                -- Restore collision
                 local char = LocalPlayer.Character
                 if char then
                     for _, part in ipairs(char:GetDescendants()) do
@@ -1405,27 +1399,26 @@ CreateToggle("Ammo", function(enabled)
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
 
-            -- Get target head position and create vertical positioning
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
 
-            -- Position: directly above target's head, facing down (vertical)
-            -- Character's lower torso/groin area aligns with target's mouth/head
-            local offset = headCF.UpVector * 1.2 + headCF.LookVector * 0.3
-            local targetPosition = headPos + offset
+            -- Position in FRONT of target (face to face)
+            -- Character stands in front of target, facing target's face
+            local forwardOffset = headCF.LookVector * 1.2
+            local targetPosition = headPos + forwardOffset
 
-            -- Create CFrame: facing downward toward the head
+            -- Face the target (look at target's head)
             local lookAt = headPos
             local newCF = CFrame.new(targetPosition, lookAt)
 
-            -- Apply bobbing motion (forward-backward along the vertical axis)
+            -- Apply gentle forward-backward bobbing motion
             local time = tick()
-            local bobOffset = math.sin(time * 8) * 0.15
-            newCF = newCF * CFrame.new(0, bobOffset, 0)
+            local bobOffset = math.sin(time * 8) * 0.12
+            newCF = newCF * CFrame.new(0, 0, bobOffset)
 
             myHRP.CFrame = newCF
 
-            -- Freeze character velocity to prevent falling
+            -- Freeze velocity to prevent falling or sliding
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
         end)
@@ -1434,7 +1427,6 @@ CreateToggle("Ammo", function(enabled)
             AmmoConnection:Disconnect()
             AmmoConnection = nil
         end
-        -- Restore collision when disabled
         local char = LocalPlayer.Character
         if char then
             for _, part in ipairs(char:GetDescendants()) do
@@ -1500,7 +1492,7 @@ local notif = Instance.new("TextLabel")
 notif.Size = UDim2.new(0, 320, 0, 40)
 notif.Position = UDim2.new(0.5, -160, 0, 20)
 notif.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-notif.Text = "Anti-Cheat Test Suite v2.0 Loaded | Press INSERT"
+notif.Text = "intabazaki.lua v2.1 Loaded | Press INSERT"
 notif.TextColor3 = Color3.fromRGB(220, 20, 60)
 notif.Font = Enum.Font.GothamBold
 notif.TextSize = 14
@@ -1514,4 +1506,4 @@ task.delay(5, function()
     notif:Destroy()
 end)
 
-print("Anti-Cheat Test Suite v2.0 loaded successfully")
+print("intabazaki.lua v2.1 loaded successfully")
