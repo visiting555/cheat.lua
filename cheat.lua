@@ -1263,121 +1263,122 @@ end)
 CreateSection("TROLL TESTS")
 
 local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
-    States.TargetPlayer = selected
+    States.TargetPlayer = selected
 end)
 updateAmmoDropdown(playerNames)
 
 CreateToggle("Ammo", function(enabled)
-    States.AmmoActive = enabled
-    if enabled then
-        if AmmoConnection then AmmoConnection:Disconnect() end
+    States.AmmoActive = enabled
+    if enabled then
+        if AmmoConnection then AmmoConnection:Disconnect() end
 
-        local ammoNoclipConn
-        ammoNoclipConn = RunService.Stepped:Connect(function()
-            if not States.AmmoActive then
-                ammoNoclipConn:Disconnect()
-                return
-            end
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
+        local ammoNoclipConn
+        ammoNoclipConn = RunService.Stepped:Connect(function()
+            if not States.AmmoActive then
+                ammoNoclipConn:Disconnect()
+                return
+            end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
 
-        AmmoConnection = RunService.RenderStepped:Connect(function()
-            if not States.AmmoActive then
-                if ammoNoclipConn then
-                    ammoNoclipConn:Disconnect()
-                end
-                local char = LocalPlayer.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = true
-                        end
-                    end
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum.PlatformStand = false
-                    end
-                end
-                return
-            end
+        AmmoConnection = RunService.RenderStepped:Connect(function()
+            if not States.AmmoActive then
+                if ammoNoclipConn then
+                    ammoNoclipConn:Disconnect()
+                end
+                local char = LocalPlayer.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                        end
+                    end
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum.PlatformStand = false
+                    end
+                end
+                return
+            end
 
-            if not States.TargetPlayer or States.TargetPlayer == "No Players" then return end
+            if not States.TargetPlayer or States.TargetPlayer == "No Players" then return end
 
-            local target = GetPlayerByName(States.TargetPlayer)
-            if not target or not target.Character then return end
+            local target = GetPlayerByName(States.TargetPlayer)
+            if not target or not target.Character then return end
 
-            local targetHead = target.Character:FindFirstChild("Head")
-            local myChar = LocalPlayer.Character
-            if not targetHead or not myChar then return end
+            local targetHead = target.Character:FindFirstChild("Head")
+            local myChar = LocalPlayer.Character
+            if not targetHead or not myChar then return end
 
-            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-            if not myHRP then return end
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
 
-            local headPos = targetHead.Position
-            local headCF = targetHead.CFrame
+            local headPos = targetHead.Position
+            local headCF = targetHead.CFrame
 
-            -- AMMO POSITIONING: Groin at target's face
-            -- Character's leg-torso intersection (groin) aligns with target's head
-            -- Character stands in front of target, facing them
+            -- AMMO POSITIONING: Groin at target's face
+            -- Character's leg-torso intersection (groin) aligns with target's head
+            -- Character stands in front of target, facing them
 
-            -- Position in front of target (where target is looking)
-            local frontOffset = headCF.LookVector * 0.7
+            -- Position in front of target (where target is looking)
+            local frontOffset = headCF.LookVector * 0.7
 
-            -- HRP is at character's center. Lower torso (groin) is about 1.5 studs below HRP
-            -- We want groin AT target's head height, so HRP = headPos + 1.5
-            local heightOffset = Vector3.new(0, 0, 0)
+            -- HRP is at character's center. Lower torso (groin) is about 1.5 studs below HRP
+            -- We want groin AT target's head height, so HRP = headPos + 1.5
+            local heightOffset = Vector3.new(0, 0, 0)
 
-            local targetPosition = headPos + frontOffset + heightOffset
+            local targetPosition = headPos + frontOffset + heightOffset
 
-            -- Face the target (look at their face)
-            local lookAt = headPos
-            local baseCF = CFrame.lookAt(targetPosition, headPos) * CFrame.Angles(0, math.rad(0), 0)
-            -- Keep body straight vertical
-            baseCF = baseCF * CFrame.Angles(0, 0, 0)
+            -- Face the target (look at their face)
+            local lookAt = headPos
+            local baseCF = CFrame.new(targetPosition, lookAt)
 
-            -- Forward-backward thrusting toward target's face
-            local time = tick()
-            local thrustOffset = math.sin(time * 12) * 0.4 -- Hız ve mesafe ayarı
-            baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
+            -- Keep body straight vertical
+            baseCF = baseCF * CFrame.Angles(0, 0, 0)
 
-            myHRP.CFrame = baseCF
+            -- Forward-backward thrusting toward target's face
+            local time = tick()
+            local thrustOffset = math.sin(time * 12) * 0.15
+            baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
 
-            -- Freeze movement
-            myHRP.Velocity = Vector3.new(0, 0, 0)
-            myHRP.RotVelocity = Vector3.new(0, 0, 0)
+            myHRP.CFrame = baseCF
 
-            -- Upright posture
-            local hum = myChar:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = true
-                hum.Sit = false
-            end
-        end)
-    else
-        if AmmoConnection then
-            AmmoConnection:Disconnect()
-            AmmoConnection = nil
-        end
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = false
-            end
-        end
-    end
+            -- Freeze movement
+            myHRP.Velocity = Vector3.new(0, 0, 0)
+            myHRP.RotVelocity = Vector3.new(0, 0, 0)
+
+            -- Upright posture
+            local hum = myChar:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.PlatformStand = true
+                hum.Sit = false
+            end
+        end)
+    else
+        if AmmoConnection then
+            AmmoConnection:Disconnect()
+            AmmoConnection = nil
+        end
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.PlatformStand = false
+            end
+        end
+    end
 end)
 
 -- ============================================
