@@ -1323,45 +1323,38 @@ CreateToggle("Ammo", function(enabled)
             local headPos = targetHead.Position
             local headCF = targetHead.CFrame
 
-            -- DÜZELTİLMİŞ POZİSYONLAMA:
-            -- Groin (bacak-gövde kesişimi) = HRP'den ~1.5 stud AŞAĞI
-            -- HRP'yi headPos'un 1.5 stud ÜSTÜNE koy (groin headPos'a denk gelsin)
-            local heightOffset = Vector3.new(0, 1.5, 0)
+            -- AMMO POSITIONING: Groin at target's face
+            -- Character's leg-torso intersection (groin) aligns with target's head
+            -- Character stands in front of target, facing them
 
-            -- Hedefin ÖNÜNDE ol (hedefin baktığı yönde)
+            -- Position in front of target (where target is looking)
             local frontOffset = headCF.LookVector * 0.4
 
-            -- Hedef pozisyonu: yüz hizası + ön offset + yukarı offset
+            -- HRP is at character's center. Lower torso (groin) is about 1.5 studs below HRP
+            -- We want groin AT target's head height, so HRP = headPos + 1.5
+            local heightOffset = Vector3.new(0, 1.5, 0)
+
             local targetPosition = headPos + frontOffset + heightOffset
 
-            -- İleri-geri sallanma (thrusting)
+            -- Face the target (look at their face)
+            local lookAt = headPos
+            local baseCF = CFrame.fromMatrix()
+
+            -- Keep body straight vertical
+            baseCF = baseCF * CFrame.Angles(0, 0, 0)
+
+            -- Forward-backward thrusting toward target's face
             local time = tick()
             local thrustOffset = math.sin(time * 12) * 0.15
-
-            -- DÜZ (UPRIGHT) CFRAME:
-            -- Position = hedef pozisyon + thrust
-            -- LookVector = hedefin yüzüne bak (düz yatay)
-            -- UpVector = düz yukarı (World Up)
-            local lookAt = headPos
-            local baseCF = CFrame.new(targetPosition, lookAt)
-
-            -- THRUST: LookVector yönünde ileri-geri (hedefe doğru/uzaklaşma)
-            baseCF = baseCF + baseCF.LookVector * thrustOffset
-
-            -- ROTASYONU DÜZELT: Karakteri tam dik tut
-            -- World UpVector kullanarak karakteri düz yukarı döndür
-            local rightVector = baseCF.RightVector
-            local upVector = Vector3.new(0, 1, 0)
-            local lookVector = rightVector:Cross(upVector).Unit
-            baseCF = CFrame.fromMatrix(baseCF.Position, rightVector, upVector, -lookVector)
+            baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
 
             myHRP.CFrame = baseCF
 
-            -- Freeze
+            -- Freeze movement
             myHRP.Velocity = Vector3.new(0, 0, 0)
             myHRP.RotVelocity = Vector3.new(0, 0, 0)
 
-            -- Upright
+            -- Upright posture
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
