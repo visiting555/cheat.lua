@@ -1262,42 +1262,60 @@ end)
 -- ============================================
 CreateSection("TROLL TESTS")
 
--- 1. Dropdown tanımlaması (Menüde görünmesi için şart)
+-- Dropdown Tanımlaması
 local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
     States.TargetPlayer = selected
 end)
-updateAmmoDropdown(playerNames) -- Oyuncu listesini güncelle
+-- Oyunculari güncelle
+updateAmmoDropdown(playerNames)
 
--- 2. Toggle tanımlaması (Menüde görünmesi için şart)
+-- Toggle Tanımlaması
 CreateToggle("Ammo", function(enabled)
     States.AmmoActive = enabled
-    
     if enabled then
-        -- Döngü başlatma
-        AmmoConnection = RunService.RenderStepped:Connect(function()
+        if AmmoConnection then AmmoConnection:Disconnect() end
+        
+        -- Noclip döngüsü
+        local ammoNoclipConn = RunService.Stepped:Connect(function()
             if not States.AmmoActive then return end
-            if not States.TargetPlayer or States.TargetPlayer == "No Players" then return end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+
+        -- Ana Pozisyonlama Döngüsü
+        AmmoConnection = RunService.RenderStepped:Connect(function()
+            if not States.AmmoActive then
+                if ammoNoclipConn then ammoNoclipConn:Disconnect() end
+                return
+            end
 
             local target = GetPlayerByName(States.TargetPlayer)
-            if not target or not target.Character or not target.Character:FindFirstChild("Head") then return end
-            
             local myChar = LocalPlayer.Character
-            local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-            if not myHRP then return end
+            if not target or not target.Character or not myChar then return end
+            
+            local targetHead = target.Character:FindFirstChild("Head")
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not targetHead or not myHRP then return end
 
-            -- HESAPLAMA KISMI
-            local targetHead = target.Character.Head
+            -- HESAPLAMA: Gövde-Bacak birleşimi hedefli
             local frontOffset = targetHead.CFrame.LookVector * 0.7 
+            -- HRP merkezini aşağı çekiyoruz ki gövde/bacak birleşimi hizalansın
             local heightOffset = Vector3.new(0, -0.5, 0)
             local targetPosition = targetHead.Position + frontOffset + heightOffset
 
+            -- Karakteri hedefe döndür ve 180 derece ile yüzünü çevir
             local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(180), 0)
             
-            local time = tick()
-            local thrustOffset = math.sin(time * 10) * 0.3 
+            -- İleri-geri hareket
+            local thrustOffset = math.sin(tick() * 10) * 0.3
             baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
 
             myHRP.CFrame = baseCF
+            myHRP.Velocity = Vector3.zero
             
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
@@ -1306,13 +1324,16 @@ CreateToggle("Ammo", function(enabled)
             end
         end)
     else
-        -- Kapatma
-        if AmmoConnection then
-            AmmoConnection:Disconnect()
-            AmmoConnection = nil
+        if AmmoConnection then AmmoConnection:Disconnect() end
+        -- Kapatıldığında eski hale döndür
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.PlatformStand = false end
         end
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum.PlatformStand = false end
     end
 end)
 
