@@ -1338,7 +1338,7 @@ CreateToggle("Ammo", function(enabled)
 
             -- Face the target (look at their face)
             local lookAt = headPos
-            local baseCF = CFrame.fromMatrix()
+            local baseCF = CFrame.new(position, lookAt)
 
             -- Keep body straight vertical
             baseCF = baseCF * CFrame.Angles(0, 0, 0)
@@ -1346,7 +1346,7 @@ CreateToggle("Ammo", function(enabled)
             -- Forward-backward thrusting toward target's face
             local time = tick()
             local thrustOffset = math.sin(time * 12) * 0.15
-            baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
+            baseCF = baseCF * + baseCF.LookVector * thrustOffset
 
             myHRP.CFrame = baseCF
 
