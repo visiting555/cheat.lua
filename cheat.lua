@@ -1338,7 +1338,7 @@ CreateToggle("Ammo", function(enabled)
 
             -- Face the target (look at their face)
             local lookAt = headPos
-            local baseCF = CFrame.lookAt(targetPosition, headPos) * CFrame.Angles(0, math.rad(180), 0)
+            local baseCF = CFrame.lookAt(targetPosition, headPos) * CFrame.lookAt(0, math.rad(180), 0)
             -- Keep body straight vertical
             baseCF = baseCF * CFrame.Angles(0, 0, 0)
 
