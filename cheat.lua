@@ -1346,8 +1346,7 @@ CreateToggle("Ammo", function(enabled)
             -- Forward-backward thrusting toward target's face
             local time = tick()
             local thrustOffset = math.sin(time * 12) * 0.15
-            baseCF = baseCF * + baseCF.LookVector * thrustOffset
-
+            baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
             myHRP.CFrame = baseCF
 
             -- Freeze movement
