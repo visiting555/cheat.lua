@@ -1328,24 +1328,23 @@ CreateToggle("Ammo", function(enabled)
             -- Character stands in front of target, facing them
 
             -- Position in front of target (where target is looking)
-            local frontOffset = headCF.LookVector * 0.4
+            local frontOffset = headCF.LookVector * 0.7
 
             -- HRP is at character's center. Lower torso (groin) is about 1.5 studs below HRP
             -- We want groin AT target's head height, so HRP = headPos + 1.5
-            local heightOffset = Vector3.new(0, 1.5, 0)
+            local heightOffset = Vector3.new(0, 0, 0)
 
             local targetPosition = headPos + frontOffset + heightOffset
 
             -- Face the target (look at their face)
             local lookAt = headPos
-            local baseCF = CFrame.new(targetPosition, lookAt)
-
+            local baseCF = CFrame.lookAt(targetPosition, headPos) * CFrame.Angles(0, math.rad(180), 0)
             -- Keep body straight vertical
             baseCF = baseCF * CFrame.Angles(0, 0, 0)
 
             -- Forward-backward thrusting toward target's face
             local time = tick()
-            local thrustOffset = math.sin(time * 12) * 0.15
+            local thrustOffset = math.sin(time * 12) * 0.4 -- Hız ve mesafe ayarı
             baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
 
             myHRP.CFrame = baseCF
