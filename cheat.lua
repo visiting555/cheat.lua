@@ -1260,126 +1260,42 @@ end)
 -- ============================================
 -- TROLL TESTS - AMMO (FIXED POSITIONING)
 -- ============================================
-CreateSection("TROLL TESTS")
+-- Hedefin tam önünde, yüz hizasında hizalama
+local targetHead = target.Character:FindFirstChild("Head")
+local myChar = LocalPlayer.Character
+local myHRP = myChar:FindFirstChild("HumanoidRootPart")
 
-local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
-    States.TargetPlayer = selected
-end)
-updateAmmoDropdown(playerNames)
+if targetHead and myHRP then
+    -- 1. Hedefin önünde kalmak için LookVector'ü kullan
+    local frontOffset = targetHead.CFrame.LookVector * 0.7 
+    
+    -- 2. Yükseklik: Karakterin HRP'si (gövde merkezi) ile 
+    -- bacak birleşimi arasındaki farkı kapatmak için 0.5 stud aşağı alıyoruz
+    local heightOffset = Vector3.new(0, -0.5, 0)
+    
+    local targetPosition = targetHead.Position + frontOffset + heightOffset
 
-CreateToggle("Ammo", function(enabled)
-    States.AmmoActive = enabled
-    if enabled then
-        if AmmoConnection then AmmoConnection:Disconnect() end
+    -- 3. CFrame.lookAt ile hedefe bakmayı sağla ve 
+    -- 180 derece ile karakterin ön yüzünü hedefe döndür
+    local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(180), 0)
 
-        local ammoNoclipConn
-        ammoNoclipConn = RunService.Stepped:Connect(function()
-            if not States.AmmoActive then
-                ammoNoclipConn:Disconnect()
-                return
-            end
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
+    -- 4. İleri-geri (thrust) hareketi (Z ekseninde değil, karakterin baktığı yöne doğru)
+    local time = tick()
+    local thrustOffset = math.sin(time * 10) * 0.3 
+    baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
 
-        AmmoConnection = RunService.RenderStepped:Connect(function()
-            if not States.AmmoActive then
-                if ammoNoclipConn then
-                    ammoNoclipConn:Disconnect()
-                end
-                local char = LocalPlayer.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = true
-                        end
-                    end
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum.PlatformStand = false
-                    end
-                end
-                return
-            end
-
-            if not States.TargetPlayer or States.TargetPlayer == "No Players" then return end
-
-            local target = GetPlayerByName(States.TargetPlayer)
-            if not target or not target.Character then return end
-
-            local targetHead = target.Character:FindFirstChild("Head")
-            local myChar = LocalPlayer.Character
-            if not targetHead or not myChar then return end
-
-            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-            if not myHRP then return end
-
-            local headPos = targetHead.Position
-            local headCF = targetHead.CFrame
-
-            -- AMMO POSITIONING: Groin at target's face
-            -- Character's leg-torso intersection (groin) aligns with target's head
-            -- Character stands in front of target, facing them
-
-            -- Position in front of target (where target is looking)
-            local frontOffset = headCF.LookVector * 0.7
-
-            -- HRP is at character's center. Lower torso (groin) is about 1.5 studs below HRP
-            -- We want groin AT target's head height, so HRP = headPos + 1.5
-            local heightOffset = Vector3.new(0, 0, 0)
-
-            local targetPosition = headPos + frontOffset + heightOffset
-
-            -- Face the target (look at their face)
-            local lookAt = headPos
-            local baseCF = CFrame.new(targetPosition, lookAt)
-
-            -- Keep body straight vertical
-            baseCF = baseCF * CFrame.Angles(0, 0, 0)
-
-            -- Forward-backward thrusting toward target's face
-            local time = tick()
-            local thrustOffset = math.sin(time * 12) * 0.15
-            baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
-
-            myHRP.CFrame = baseCF
-
-            -- Freeze movement
-            myHRP.Velocity = Vector3.new(0, 0, 0)
-            myHRP.RotVelocity = Vector3.new(0, 0, 0)
-
-            -- Upright posture
-            local hum = myChar:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = true
-                hum.Sit = false
-            end
-        end)
-    else
-        if AmmoConnection then
-            AmmoConnection:Disconnect()
-            AmmoConnection = nil
-        end
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.PlatformStand = false
-            end
-        end
-    end
-end)
+    myHRP.CFrame = baseCF
+    
+    -- Freeze ve Postür
+    myHRP.Velocity = Vector3.new(0, 0, 0)
+    myHRP.RotVelocity = Vector3.new(0, 0, 0)
+    
+    local hum = myChar:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.PlatformStand = true
+        hum.Sit = false
+    end
+end
 
 -- ============================================
 -- CLEANUP ON DEATH
