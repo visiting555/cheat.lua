@@ -1260,42 +1260,61 @@ end)
 -- ============================================
 -- TROLL TESTS - AMMO (FIXED POSITIONING)
 -- ============================================
--- Hedefin tam önünde, yüz hizasında hizalama
-local targetHead = target.Character:FindFirstChild("Head")
-local myChar = LocalPlayer.Character
-local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+CreateSection("TROLL TESTS")
 
-if targetHead and myHRP then
-    -- 1. Hedefin önünde kalmak için LookVector'ü kullan
-    local frontOffset = targetHead.CFrame.LookVector * 0.7 
-    
-    -- 2. Yükseklik: Karakterin HRP'si (gövde merkezi) ile 
-    -- bacak birleşimi arasındaki farkı kapatmak için 0.5 stud aşağı alıyoruz
-    local heightOffset = Vector3.new(0, -0.5, 0)
-    
-    local targetPosition = targetHead.Position + frontOffset + heightOffset
+-- 1. Dropdown tanımlaması (Menüde görünmesi için şart)
+local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
+    States.TargetPlayer = selected
+end)
+updateAmmoDropdown(playerNames) -- Oyuncu listesini güncelle
 
-    -- 3. CFrame.lookAt ile hedefe bakmayı sağla ve 
-    -- 180 derece ile karakterin ön yüzünü hedefe döndür
-    local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(180), 0)
-
-    -- 4. İleri-geri (thrust) hareketi (Z ekseninde değil, karakterin baktığı yöne doğru)
-    local time = tick()
-    local thrustOffset = math.sin(time * 10) * 0.3 
-    baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
-
-    myHRP.CFrame = baseCF
+-- 2. Toggle tanımlaması (Menüde görünmesi için şart)
+CreateToggle("Ammo", function(enabled)
+    States.AmmoActive = enabled
     
-    -- Freeze ve Postür
-    myHRP.Velocity = Vector3.new(0, 0, 0)
-    myHRP.RotVelocity = Vector3.new(0, 0, 0)
-    
-    local hum = myChar:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.PlatformStand = true
-        hum.Sit = false
+    if enabled then
+        -- Döngü başlatma
+        AmmoConnection = RunService.RenderStepped:Connect(function()
+            if not States.AmmoActive then return end
+            if not States.TargetPlayer or States.TargetPlayer == "No Players" then return end
+
+            local target = GetPlayerByName(States.TargetPlayer)
+            if not target or not target.Character or not target.Character:FindFirstChild("Head") then return end
+            
+            local myChar = LocalPlayer.Character
+            local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            -- HESAPLAMA KISMI
+            local targetHead = target.Character.Head
+            local frontOffset = targetHead.CFrame.LookVector * 0.7 
+            local heightOffset = Vector3.new(0, -0.5, 0)
+            local targetPosition = targetHead.Position + frontOffset + heightOffset
+
+            local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(180), 0)
+            
+            local time = tick()
+            local thrustOffset = math.sin(time * 10) * 0.3 
+            baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
+
+            myHRP.CFrame = baseCF
+            
+            local hum = myChar:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.PlatformStand = true
+                hum.Sit = false
+            end
+        end)
+    else
+        -- Kapatma
+        if AmmoConnection then
+            AmmoConnection:Disconnect()
+            AmmoConnection = nil
+        end
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
     end
-end
+end)
 
 -- ============================================
 -- CLEANUP ON DEATH
