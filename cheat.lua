@@ -1340,7 +1340,7 @@ CreateToggle("Ammo", function(enabled)
             local lookAt = headPos
             local baseCF = CFrame.lookAt(targetPosition, headPos) * CFrame.lookAt(0, math.rad(180), 0)
             -- Keep body straight vertical
-            baseCF = baseCF * CFrame.Angles(0, 0, 0)
+            baseCF = baseCF * CFrame.lookAt(0, 0, 0)
 
             -- Forward-backward thrusting toward target's face
             local time = tick()
