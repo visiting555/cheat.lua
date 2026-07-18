@@ -1338,7 +1338,7 @@ CreateToggle("Ammo", function(enabled)
 
             -- Face the target (look at their face)
             local lookAt = headPos
-            local baseCF = CFrame.new(position, lookAt)
+            local baseCF = CFrame.new(targetPosition, lookAt)
 
             -- Keep body straight vertical
             baseCF = baseCF * CFrame.Angles(0, 0, 0)
@@ -1347,6 +1347,7 @@ CreateToggle("Ammo", function(enabled)
             local time = tick()
             local thrustOffset = math.sin(time * 12) * 0.15
             baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
+
             myHRP.CFrame = baseCF
 
             -- Freeze movement
