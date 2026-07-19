@@ -1304,7 +1304,8 @@ CreateToggle("Ammo", function(enabled)
             -- HESAPLAMA: Gövde-Bacak birleşimi hedefli
             local frontOffset = targetHead.CFrame.LookVector * 0.7 
             -- HRP merkezini aşağı çekiyoruz ki gövde/bacak birleşimi hizalansın
-            local targetPosition = targetHead.Position + frontOffset + Vector3.new(0, -1.2, 0)
+            local heightOffset = Vector3.new(0, -0, 0)
+            local targetPosition = targetHead.Position + frontOffset + heightOffset
 
             -- Karakteri hedefe döndür ve 180 derece ile yüzünü çevir
             local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(0), 0)
