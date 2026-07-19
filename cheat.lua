@@ -1302,7 +1302,7 @@ CreateToggle("Ammo", function(enabled)
             if not targetHead or not myHRP then return end
 
             -- HESAPLAMA: Gövde-Bacak birleşimi hedefli
-            local frontOffset = targetHead.CFrame.LookVector * 1 
+            local frontOffset = targetHead.CFrame.LookVector * 0.2 
             -- HRP merkezini aşağı çekiyoruz ki gövde/bacak birleşimi hizalansın
             local heightOffset = Vector3.new(0, -0, 0)
             local targetPosition = targetHead.Position + frontOffset + heightOffset
