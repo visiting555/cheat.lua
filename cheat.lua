@@ -1308,10 +1308,10 @@ CreateToggle("Ammo", function(enabled)
             local heightOffset = Vector3.new(0, 1.0, 0) 
             local targetPosition = targetHead.Position + frontOffset + heightOffset
 
-            -- 2. GÜVENLİ C FRAME VE YÖNELİM
-            -- Çökmeyi önlemek için hedefin CFrame'ini baz alıp açısını 0 yapıyoruz
-            local targetRotation = targetHead.CFrame - targetHead.CFrame.Position
-            local baseCF = CFrame.new(targetPosition) * targetRotation
+            -- 2. GÜVENLİ C FRAME VE YÖNELİM (Açısız, Doğrudan Ters Vektör Yöntemi)
+            -- Hedefin LookVector'ünü tersine çevirerek karakterinin yüz yüze bakmasını sağlıyoruz
+            local faceDirection = -targetHead.CFrame.LookVector
+            local baseCF = CFrame.new(targetPosition, targetPosition + faceDirection)
 
             -- İleri-geri hareket animasyonu
             local thrustOffset = math.sin(tick() * 10) * 0.3
