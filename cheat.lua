@@ -1304,11 +1304,11 @@ CreateToggle("Ammo", function(enabled)
             -- HESAPLAMA: Gövde-Bacak birleşimi hedefli
             local frontOffset = targetHead.CFrame.LookVector * 0.7 
             -- HRP merkezini aşağı çekiyoruz ki gövde/bacak birleşimi hizalansın
-            local heightOffset = Vector3.new(0, -0.5, 0)
+            local heightOffset = Vector3.new(0, -0, 0)
             local targetPosition = targetHead.Position + frontOffset + heightOffset
 
             -- Karakteri hedefe döndür ve 180 derece ile yüzünü çevir
-            local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(180), 0)
+            local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(0), 0)
             
             -- İleri-geri hareket
             local thrustOffset = math.sin(tick() * 10) * 0.3
@@ -1335,7 +1335,7 @@ CreateToggle("Ammo", function(enabled)
             if hum then hum.PlatformStand = false end
         end
     end
-end)
+end) 
 
 -- ============================================
 -- CLEANUP ON DEATH
