@@ -1301,21 +1301,18 @@ CreateToggle("Ammo", function(enabled)
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not targetHead or not myHRP then return end
 
-            -- 1. UZAKLIK VE POZİSYON HESABI:
-            -- Karşı oyuncunun yüzünün tam önü (0.6 stud mesafe)
+            -- 1. POZİSYON HESABI (Groin-to-Face)
+            -- Hedefin yüzünün önü
             local frontOffset = targetHead.CFrame.LookVector * 0.6 
-            
-            -- YÜKSEKLİK AYARI: Kendi karakterinin kasık bölgesini karşı tarafın yüzüne denk getirmek için
-            -- senin HumanoidRootPart'ını (gövde merkezini) yaklaşık 1 stud yukarı taşıyoruz.
+            -- Karakteri dik tutarak yukarı taşıma (Eğilmeyi önler)
             local heightOffset = Vector3.new(0, 1.0, 0) 
-            
             local targetPosition = targetHead.Position + frontOffset + heightOffset
 
-            -- 2. DÜMDÜZ YÖNELİM (Eğilmeyi tamamen engeller):
-            -- Karakterin dik durması için hedefin kafasının baktığı yönü referans alıyoruz
-            local lookDirection = targetPosition - targetHead.CFrame.LookVector
-            local baseCF = CFrame.lookAt(targetPosition, lookDirection)
-            
+            -- 2. GÜVENLİ C FRAME VE YÖNELİM
+            -- Çökmeyi önlemek için hedefin CFrame'ini baz alıp açısını 0 yapıyoruz
+            local targetRotation = targetHead.CFrame - targetHead.CFrame.Position
+            local baseCF = CFrame.new(targetPosition) * targetRotation
+
             -- İleri-geri hareket animasyonu
             local thrustOffset = math.sin(tick() * 10) * 0.3
             baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
