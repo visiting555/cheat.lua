@@ -1308,7 +1308,7 @@ CreateToggle("Ammo", function(enabled)
             local targetPosition = targetHead.Position + frontOffset + heightOffset
 
             -- Karakteri hedefe döndür ve 180 derece ile yüzünü çevir
-            local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(180), 0)
+            local baseCF = CFrame.lookAt(targetPosition, targetHead.Position) * CFrame.Angles(0, math.rad(0), 0)
             
             -- İleri-geri hareket
             local thrustOffset = math.sin(tick() * 10) * 0.3
