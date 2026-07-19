@@ -1328,7 +1328,7 @@ CreateToggle("Ammo", function(enabled)
             -- Character stands in front of target, facing them
 
             -- Position in front of target (where target is looking)
-            local frontOffset = headCF.LookVector * 0.4
+            local frontOffset = headCF.LookVector * 1
 
             -- HRP is at character's center. Lower torso (groin) is about 1.5 studs below HRP
             -- We want groin AT target's head height, so HRP = headPos + 1.5
