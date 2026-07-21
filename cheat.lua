@@ -1,8 +1,4 @@
-
-# Let me analyze the file structure and then create the fixed version
-# I'll write the complete fixed script based on the requirements
-
-fixed_script = r'''local Players = game:GetService("Players")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -64,7 +60,6 @@ ScrollFrame.Parent = MainFrame
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Padding = UDim.new(0, 5)
 UIListLayout.Parent = ScrollFrame
-
 local function CreateSection(text)
     local section = Instance.new("TextLabel")
     section.Size = UDim2.new(1, -10, 0, 25)
@@ -110,19 +105,8 @@ local function CreateToggle(text, callback)
     btnCorner.CornerRadius = UDim.new(0, 4)
     btnCorner.Parent = toggleBtn
     local enabled = false
-    toggleBtn.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        if enabled then
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
-            toggleBtn.Text = "ON"
-        else
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            toggleBtn.Text = "OFF"
-        end
-        callback(enabled)
-    end)
-    return frame, toggleBtn, function() return enabled end, function(val) 
-        enabled = val
+    local function setState(state)
+        enabled = state
         if enabled then
             toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
             toggleBtn.Text = "ON"
@@ -132,6 +116,10 @@ local function CreateToggle(text, callback)
         end
         callback(enabled)
     end
+    toggleBtn.MouseButton1Click:Connect(function()
+        setState(not enabled)
+    end)
+    return frame, toggleBtn, setState
 end
 
 local function CreateSlider(text, min, max, default, callback)
@@ -383,7 +371,6 @@ local function CreateColorPicker(text, callback)
     end)
     return frame
 end
-
 local States = {
     Fly = false, FlySpeed = 50, NoClip = false, WalkSpeed = 16,
     ESP = false, ESPChams = false, ESPBox = false, ESPName = false,
@@ -516,12 +503,8 @@ local function StartFly()
     bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     bv.Parent = hrp
     FlyConnection = RunService.RenderStepped:Connect(function()
-        if not States.Fly then
-            return
-        end
-        if not hrp or not hrp.Parent then
-            return
-        end
+        if not States.Fly then return end
+        if not hrp or not hrp.Parent then return end
         local camCF = Camera.CFrame
         local dir = Vector3.new(0, 0, 0)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then
@@ -559,9 +542,7 @@ local function StopFly()
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hum then
-            hum.PlatformStand = false
-        end
+        if hum then hum.PlatformStand = false end
         if hrp then
             for _, v in ipairs(hrp:GetChildren()) do
                 if v.Name == "ACFlyGyro" or v.Name == "ACFlyVelocity" then
@@ -760,7 +741,6 @@ local function StopCarNoClip()
         end
     end
 end
-
 CreateSection("MOVEMENT TESTS")
 
 CreateSlider("WalkSpeed", 16, 500, 16, function(val)
@@ -778,7 +758,7 @@ CreateSlider("Fly Speed", 10, 200, 50, function(val)
     States.FlySpeed = val
 end)
 
-local FlyToggleBtn, _, FlySetState = CreateToggle("Fly", function(enabled)
+local _, _, FlySetState = CreateToggle("Fly", function(enabled)
     States.Fly = enabled
     FlyWasEnabled = enabled
     if enabled then
@@ -788,7 +768,7 @@ local FlyToggleBtn, _, FlySetState = CreateToggle("Fly", function(enabled)
     end
 end)
 
-local NoClipToggleBtn, _, NoClipSetState = CreateToggle("NoClip", function(enabled)
+local _, _, NoClipSetState = CreateToggle("NoClip", function(enabled)
     States.NoClip = enabled
     NoClipWasEnabled = enabled
     if enabled then
@@ -840,7 +820,6 @@ CreateButton("Teleport to Car", function()
         end
     end
 end)
-
 CreateSection("ESP TESTS")
 
 CreateToggle("Enable ESP", function(enabled)
@@ -1121,14 +1100,13 @@ ESPConnection = RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
 CreateSection("COMBAT TESTS")
 
 CreateToggle("Silent Aim", function(enabled)
     States.SilentAim = enabled
 end)
 
-local AimbotToggleBtn, _, AimbotSetState = CreateToggle("Aimbot", function(enabled)
+local _, _, AimbotSetState = CreateToggle("Aimbot", function(enabled)
     States.Aimbot = enabled
     AimbotWasEnabled = enabled
     if enabled then
@@ -1214,7 +1192,6 @@ CreateButton("Kill All", function()
         end
     end
 end)
-
 CreateSection("UTILITY TESTS")
 
 CreateToggle("Anti AFK", function(enabled)
@@ -1330,7 +1307,7 @@ CreateToggle("Glass Character", function(enabled)
     end
 end)
 
-local GodModeToggleBtn, _, GodModeSetState = CreateToggle("God Mode", function(enabled)
+local _, _, GodModeSetState = CreateToggle("God Mode", function(enabled)
     States.GodMode = enabled
     GodModeWasEnabled = enabled
     if enabled then
@@ -1340,7 +1317,7 @@ local GodModeToggleBtn, _, GodModeSetState = CreateToggle("God Mode", function(e
     end
 end)
 
-local InvisibleToggleBtn, _, InvisibleSetState = CreateToggle("Invisible", function(enabled)
+local _, _, InvisibleSetState = CreateToggle("Invisible", function(enabled)
     States.Invisible = enabled
     InvisibleWasEnabled = enabled
     if enabled then
@@ -1446,7 +1423,7 @@ end)
 
 CreateSection("CAR TESTS")
 
-local FlyCarToggleBtn, _, FlyCarSetState = CreateToggle("Fly Car", function(enabled)
+local _, _, FlyCarSetState = CreateToggle("Fly Car", function(enabled)
     States.FlyCar = enabled
     FlyCarWasEnabled = enabled
     if enabled then
@@ -1456,7 +1433,7 @@ local FlyCarToggleBtn, _, FlyCarSetState = CreateToggle("Fly Car", function(enab
     end
 end)
 
-local CarNoClipToggleBtn, _, CarNoClipSetState = CreateToggle("Car NoClip", function(enabled)
+local _, _, CarNoClipSetState = CreateToggle("Car NoClip", function(enabled)
     States.CarNoClip = enabled
     CarNoClipWasEnabled = enabled
     if enabled then
@@ -1608,7 +1585,3 @@ task.delay(5, function()
 end)
 
 print("intabazaki.lua v3.0 loaded successfully")
-'''
-
-print(f"Fixed script length: {len(fixed_script)} chars")
-print(f"Lines: {len(fixed_script.splitlines())}")
