@@ -60,6 +60,7 @@ ScrollFrame.Parent = MainFrame
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Padding = UDim.new(0, 5)
 UIListLayout.Parent = ScrollFrame
+
 local function CreateSection(text)
     local section = Instance.new("TextLabel")
     section.Size = UDim2.new(1, -10, 0, 25)
@@ -371,6 +372,7 @@ local function CreateColorPicker(text, callback)
     end)
     return frame
 end
+
 local States = {
     Fly = false, FlySpeed = 50, NoClip = false, WalkSpeed = 16,
     ESP = false, ESPChams = false, ESPBox = false, ESPName = false,
@@ -381,7 +383,7 @@ local States = {
     ShowFPS = false, FlyCar = false, CarSpeed = 50, CarNoClip = false,
     FakeAdmin = false, FakeAdminColor = Color3.fromRGB(255, 0, 0),
     FakeOwner = false, FakeOwnerColor = Color3.fromRGB(255, 215, 0),
-    ChatAdmin = false, ChatOwner = false, TargetPlayer = nil,
+    ChatAdmin = false, ChatOwner = false, TargetPlayer = nil, AmmoTarget = nil,
     GodMode = false, Invisible = false
 }
 
@@ -401,6 +403,7 @@ local FlyCarConnection = nil
 local CarNoClipConnection = nil
 local GodModeConnection = nil
 local InvisibleConnection = nil
+local InvisibleSignals = {}
 local FlyWasEnabled = false
 local NoClipWasEnabled = false
 local AimbotWasEnabled = false
@@ -590,8 +593,9 @@ local function StartGodMode()
         if not char then return end
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
-            hum.MaxHealth = math.huge
-            hum.Health = math.huge
+            if hum.Health < hum.MaxHealth then
+                hum.Health = hum.MaxHealth
+            end
         end
     end)
 end
@@ -601,29 +605,54 @@ local function StopGodMode()
         GodModeConnection:Disconnect()
         GodModeConnection = nil
     end
-    local char = LocalPlayer.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.MaxHealth = 100
-            hum.Health = 100
-        end
-    end
 end
 
 local function StartInvisible()
     if InvisibleConnection then InvisibleConnection:Disconnect() end
+    for _, sig in ipairs(InvisibleSignals) do
+        sig:Disconnect()
+    end
+    InvisibleSignals = {}
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local function makeInvisible(part)
+        if part:IsA("BasePart") then
+            part.LocalTransparencyModifier = 1
+            local sig = part:GetPropertyChangedSignal("LocalTransparencyModifier"):Connect(function()
+                if States.Invisible then
+                    part.LocalTransparencyModifier = 1
+                end
+            end)
+            table.insert(InvisibleSignals, sig)
+        end
+        if part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 1
+        end
+    end
+    
+    for _, part in ipairs(char:GetDescendants()) do
+        makeInvisible(part)
+    end
+    
     InvisibleConnection = RunService.RenderStepped:Connect(function()
         if not States.Invisible then return end
         local char = LocalPlayer.Character
         if not char then return end
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
-                part.Transparency = 1
+                part.LocalTransparencyModifier = 1
             end
             if part:IsA("Decal") or part:IsA("Texture") then
                 part.Transparency = 1
             end
+        end
+    end)
+    
+    char.DescendantAdded:Connect(function(part)
+        if States.Invisible then
+            makeInvisible(part)
         end
     end)
 end
@@ -633,11 +662,16 @@ local function StopInvisible()
         InvisibleConnection:Disconnect()
         InvisibleConnection = nil
     end
+    for _, sig in ipairs(InvisibleSignals) do
+        sig:Disconnect()
+    end
+    InvisibleSignals = {}
+    
     local char = LocalPlayer.Character
     if char then
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
-                part.Transparency = 0
+                part.LocalTransparencyModifier = 0
             end
             if part:IsA("Decal") or part:IsA("Texture") then
                 part.Transparency = 0
@@ -741,6 +775,7 @@ local function StopCarNoClip()
         end
     end
 end
+
 CreateSection("MOVEMENT TESTS")
 
 CreateSlider("WalkSpeed", 16, 500, 16, function(val)
@@ -820,6 +855,7 @@ CreateButton("Teleport to Car", function()
         end
     end
 end)
+
 CreateSection("ESP TESTS")
 
 CreateToggle("Enable ESP", function(enabled)
@@ -1100,6 +1136,7 @@ ESPConnection = RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
 CreateSection("COMBAT TESTS")
 
 CreateToggle("Silent Aim", function(enabled)
@@ -1192,6 +1229,7 @@ CreateButton("Kill All", function()
         end
     end
 end)
+
 CreateSection("UTILITY TESTS")
 
 CreateToggle("Anti AFK", function(enabled)
@@ -1450,16 +1488,18 @@ end)
 CreateSection("TROLL TESTS")
 
 local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
-    States.TargetPlayer = selected
+    States.AmmoTarget = selected
 end)
 updateAmmoDropdown(playerNames)
 
 CreateTextInput("Find Ammo Target", "Type name...", function(text)
     local target = GetPlayerByName(text)
     if target then
-        States.TargetPlayer = target.Name
+        States.AmmoTarget = target.Name
         for _, dd in ipairs(DropdownFrames) do
-            dd.Btn.Text = target.Name
+            if dd.Btn.Text == "Select..." or dd.Btn.Text == "No Players" then
+                dd.Btn.Text = target.Name
+            end
         end
     end
 end)
@@ -1482,7 +1522,7 @@ CreateToggle("Ammo", function(enabled)
                 if ammoNoclipConn then ammoNoclipConn:Disconnect() end
                 return
             end
-            local target = GetPlayerByName(States.TargetPlayer)
+            local target = GetPlayerByName(States.AmmoTarget)
             local myChar = LocalPlayer.Character
             if not target or not target.Character or not myChar then return end
             local targetHead = target.Character:FindFirstChild("Head")
