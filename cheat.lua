@@ -1,8 +1,8 @@
--- ============================================
--- intabazaki.lua v3.0
--- ============================================
 
-local Players = game:GetService("Players")
+# Let me analyze the file structure and then create the fixed version
+# I'll write the complete fixed script based on the requirements
+
+fixed_script = r'''local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -11,9 +11,6 @@ local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- ============================================
--- GUI SETUP
--- ============================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AntiCheatTestMenu"
 ScreenGui.ResetOnSpawn = false
@@ -68,9 +65,6 @@ local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Padding = UDim.new(0, 5)
 UIListLayout.Parent = ScrollFrame
 
--- ============================================
--- UTILITY FUNCTIONS
--- ============================================
 local function CreateSection(text)
     local section = Instance.new("TextLabel")
     section.Size = UDim2.new(1, -10, 0, 25)
@@ -127,7 +121,17 @@ local function CreateToggle(text, callback)
         end
         callback(enabled)
     end)
-    return frame, toggleBtn
+    return frame, toggleBtn, function() return enabled end, function(val) 
+        enabled = val
+        if enabled then
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
+            toggleBtn.Text = "ON"
+        else
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            toggleBtn.Text = "OFF"
+        end
+        callback(enabled)
+    end
 end
 
 local function CreateSlider(text, min, max, default, callback)
@@ -296,6 +300,47 @@ local function CreateDynamicDropdown(text, callback)
     return frame, UpdateOptions
 end
 
+local function CreateTextInput(text, placeholder, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -10, 0, 30)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.BorderSizePixel = 0
+    frame.Parent = ScrollFrame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = frame
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.35, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Parent = frame
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(0.6, -10, 0, 22)
+    textBox.Position = UDim2.new(0.38, 0, 0.5, -11)
+    textBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    textBox.Text = ""
+    textBox.PlaceholderText = placeholder
+    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textBox.Font = Enum.Font.Gotham
+    textBox.TextSize = 12
+    textBox.ClearTextOnFocus = false
+    textBox.Parent = frame
+    local tbCorner = Instance.new("UICorner")
+    tbCorner.CornerRadius = UDim.new(0, 4)
+    tbCorner.Parent = textBox
+    textBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            callback(textBox.Text)
+        end
+    end)
+    return frame, textBox
+end
+
 local function CreateColorPicker(text, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -10, 0, 35)
@@ -339,19 +384,18 @@ local function CreateColorPicker(text, callback)
     return frame
 end
 
--- ============================================
--- STATE VARIABLES
--- ============================================
 local States = {
     Fly = false, FlySpeed = 50, NoClip = false, WalkSpeed = 16,
     ESP = false, ESPChams = false, ESPBox = false, ESPName = false,
     ESPSkeleton = false, ESPTracer = false, ESPColor = Color3.fromRGB(255, 0, 0),
     SilentAim = false, Aimbot = false, AimbotFOV = 100, AimbotSmoothness = 0.5,
+    AimbotOnlyEnemy = false,
     AntiAFK = false, FOV = 70, RainbowChar = false, GlassChar = false,
     ShowFPS = false, FlyCar = false, CarSpeed = 50, CarNoClip = false,
     FakeAdmin = false, FakeAdminColor = Color3.fromRGB(255, 0, 0),
     FakeOwner = false, FakeOwnerColor = Color3.fromRGB(255, 215, 0),
-    ChatAdmin = false, ChatOwner = false, TargetPlayer = nil, AmmoActive = false
+    ChatAdmin = false, ChatOwner = false, TargetPlayer = nil,
+    GodMode = false, Invisible = false
 }
 
 local ESPObjects = {}
@@ -364,11 +408,20 @@ local AFKConnection = nil
 local AimbotConnection = nil
 local AmmoConnection = nil
 local ESPConnection = nil
+local FlyConnection = nil
+local NoClipConnection = nil
+local FlyCarConnection = nil
+local CarNoClipConnection = nil
+local GodModeConnection = nil
+local InvisibleConnection = nil
 local FlyWasEnabled = false
+local NoClipWasEnabled = false
+local AimbotWasEnabled = false
+local GodModeWasEnabled = false
+local InvisibleWasEnabled = false
+local FlyCarWasEnabled = false
+local CarNoClipWasEnabled = false
 
--- ============================================
--- PLAYER LIST HELPERS
--- ============================================
 local function GetPlayerNames()
     local names = {}
     for _, p in ipairs(Players:GetPlayers()) do
@@ -384,7 +437,7 @@ end
 
 local function GetPlayerByName(name)
     for _, p in ipairs(Players:GetPlayers()) do
-        if p.Name == name then
+        if p.Name:lower() == name:lower() then
             return p
         end
     end
@@ -406,9 +459,6 @@ Players.PlayerRemoving:Connect(function()
     task.delay(0.5, UpdateAllDropdowns)
 end)
 
--- ============================================
--- ESP CLEANUP
--- ============================================
 local function ClearESPForPlayer(player)
     if ESPObjects[player] then
         local esp = ESPObjects[player]
@@ -446,9 +496,271 @@ local function ClearAllESP()
     ESPObjects = {}
 end
 
--- ============================================
--- MOVEMENT TESTS
--- ============================================
+local function StartFly()
+    if FlyConnection then FlyConnection:Disconnect() end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
+    hum.PlatformStand = true
+    local bg = Instance.new("BodyGyro")
+    bg.Name = "ACFlyGyro"
+    bg.P = 9e4
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bg.CFrame = hrp.CFrame
+    bg.Parent = hrp
+    local bv = Instance.new("BodyVelocity")
+    bv.Name = "ACFlyVelocity"
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Parent = hrp
+    FlyConnection = RunService.RenderStepped:Connect(function()
+        if not States.Fly then
+            return
+        end
+        if not hrp or not hrp.Parent then
+            return
+        end
+        local camCF = Camera.CFrame
+        local dir = Vector3.new(0, 0, 0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            dir = dir + camCF.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            dir = dir - camCF.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            dir = dir - camCF.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            dir = dir + camCF.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            dir = dir + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            dir = dir - Vector3.new(0, 1, 0)
+        end
+        if dir.Magnitude > 0 then
+            dir = dir.Unit * States.FlySpeed
+        end
+        bv.Velocity = dir
+        bg.CFrame = camCF
+    end)
+end
+
+local function StopFly()
+    if FlyConnection then
+        FlyConnection:Disconnect()
+        FlyConnection = nil
+    end
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hum then
+            hum.PlatformStand = false
+        end
+        if hrp then
+            for _, v in ipairs(hrp:GetChildren()) do
+                if v.Name == "ACFlyGyro" or v.Name == "ACFlyVelocity" then
+                    v:Destroy()
+                end
+            end
+        end
+    end
+end
+
+local function StartNoClip()
+    if NoClipConnection then NoClipConnection:Disconnect() end
+    NoClipConnection = RunService.Stepped:Connect(function()
+        if not States.NoClip then return end
+        local char = LocalPlayer.Character
+        if not char or not char.Parent then return end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end)
+end
+
+local function StopNoClip()
+    if NoClipConnection then
+        NoClipConnection:Disconnect()
+        NoClipConnection = nil
+    end
+    local char = LocalPlayer.Character
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+local function StartGodMode()
+    if GodModeConnection then GodModeConnection:Disconnect() end
+    GodModeConnection = RunService.RenderStepped:Connect(function()
+        if not States.GodMode then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.MaxHealth = math.huge
+            hum.Health = math.huge
+        end
+    end)
+end
+
+local function StopGodMode()
+    if GodModeConnection then
+        GodModeConnection:Disconnect()
+        GodModeConnection = nil
+    end
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.MaxHealth = 100
+            hum.Health = 100
+        end
+    end
+end
+
+local function StartInvisible()
+    if InvisibleConnection then InvisibleConnection:Disconnect() end
+    InvisibleConnection = RunService.RenderStepped:Connect(function()
+        if not States.Invisible then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 1
+            end
+            if part:IsA("Decal") or part:IsA("Texture") then
+                part.Transparency = 1
+            end
+        end
+    end)
+end
+
+local function StopInvisible()
+    if InvisibleConnection then
+        InvisibleConnection:Disconnect()
+        InvisibleConnection = nil
+    end
+    local char = LocalPlayer.Character
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 0
+            end
+            if part:IsA("Decal") or part:IsA("Texture") then
+                part.Transparency = 0
+            end
+        end
+    end
+end
+
+local function StartFlyCar()
+    if FlyCarConnection then FlyCarConnection:Disconnect() end
+    FlyCarConnection = RunService.RenderStepped:Connect(function()
+        if not States.FlyCar then return end
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        local seat = hum.SeatPart
+        if not seat or not seat:IsA("VehicleSeat") then return end
+        local car = seat:FindFirstAncestorOfClass("Model")
+        if not car then return end
+        local primary = car.PrimaryPart or car:FindFirstChild("VehicleSeat") or car:FindFirstChild("Chassis")
+        if not primary then
+            for _, v in ipairs(car:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    primary = v
+                    break
+                end
+            end
+        end
+        if not primary then return end
+        local camCF = Camera.CFrame
+        local dir = Vector3.new(0, 0, 0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            dir = dir + camCF.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            dir = dir - camCF.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            dir = dir - camCF.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            dir = dir + camCF.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            dir = dir + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            dir = dir - Vector3.new(0, 1, 0)
+        end
+        if dir.Magnitude > 0 then
+            local targetVel = dir.Unit * States.CarSpeed
+            primary.Velocity = targetVel
+            primary.RotVelocity = Vector3.new(0, 0, 0)
+            local targetCF = CFrame.new(primary.Position, primary.Position + dir.Unit)
+            primary.CFrame = targetCF
+        else
+            primary.Velocity = Vector3.new(0, 0, 0)
+            primary.RotVelocity = Vector3.new(0, 0, 0)
+        end
+    end)
+end
+
+local function StopFlyCar()
+    if FlyCarConnection then
+        FlyCarConnection:Disconnect()
+        FlyCarConnection = nil
+    end
+end
+
+local function StartCarNoClip()
+    if CarNoClipConnection then CarNoClipConnection:Disconnect() end
+    CarNoClipConnection = RunService.Stepped:Connect(function()
+        if not States.CarNoClip then return end
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        local seat = hum.SeatPart
+        if not seat then return end
+        local car = seat:FindFirstAncestorOfClass("Model")
+        if not car then return end
+        for _, part in ipairs(car:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end)
+end
+
+local function StopCarNoClip()
+    if CarNoClipConnection then
+        CarNoClipConnection:Disconnect()
+        CarNoClipConnection = nil
+    end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local seat = hum.SeatPart
+    if not seat then return end
+    local car = seat:FindFirstAncestorOfClass("Model")
+    if not car then return end
+    for _, part in ipairs(car:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+end
+
 CreateSection("MOVEMENT TESTS")
 
 CreateSlider("WalkSpeed", 16, 500, 16, function(val)
@@ -466,106 +778,26 @@ CreateSlider("Fly Speed", 10, 200, 50, function(val)
     States.FlySpeed = val
 end)
 
-CreateToggle("Fly", function(enabled)
+local FlyToggleBtn, _, FlySetState = CreateToggle("Fly", function(enabled)
     States.Fly = enabled
     FlyWasEnabled = enabled
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then return end
     if enabled then
-        hum.PlatformStand = true
-        local bg = Instance.new("BodyGyro")
-        bg.Name = "ACFlyGyro"
-        bg.P = 9e4
-        bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-        bg.CFrame = hrp.CFrame
-        bg.Parent = hrp
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "ACFlyVelocity"
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        bv.Parent = hrp
-        local flyConn
-        flyConn = RunService.RenderStepped:Connect(function()
-            if not States.Fly then
-                flyConn:Disconnect()
-                return
-            end
-            if not hrp or not hrp.Parent then
-                flyConn:Disconnect()
-                return
-            end
-            local camCF = Camera.CFrame
-            local dir = Vector3.new(0, 0, 0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                dir = dir + camCF.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                dir = dir - camCF.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                dir = dir - camCF.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                dir = dir + camCF.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                dir = dir + Vector3.new(0, 1, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                dir = dir - Vector3.new(0, 1, 0)
-            end
-            if dir.Magnitude > 0 then
-                dir = dir.Unit * States.FlySpeed
-            end
-            bv.Velocity = dir
-            bg.CFrame = camCF
-        end)
+        StartFly()
     else
-        hum.PlatformStand = false
-        for _, v in ipairs(hrp:GetChildren()) do
-            if v.Name == "ACFlyGyro" or v.Name == "ACFlyVelocity" then
-                v:Destroy()
-            end
-        end
+        StopFly()
     end
 end)
 
-CreateToggle("NoClip", function(enabled)
+local NoClipToggleBtn, _, NoClipSetState = CreateToggle("NoClip", function(enabled)
     States.NoClip = enabled
-    local char = LocalPlayer.Character
-    if not char then return end
+    NoClipWasEnabled = enabled
     if enabled then
-        local noclipConn
-        noclipConn = RunService.Stepped:Connect(function()
-            if not States.NoClip then
-                noclipConn:Disconnect()
-                return
-            end
-            if not char or not char.Parent then
-                noclipConn:Disconnect()
-                return
-            end
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end)
+        StartNoClip()
     else
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
+        StopNoClip()
     end
 end)
 
--- ============================================
--- TELEPORT TESTS
--- ============================================
 CreateSection("TELEPORT TESTS")
 
 local playerNames = GetPlayerNames()
@@ -573,6 +805,16 @@ local teleportDropdown, updateTeleportDropdown = CreateDynamicDropdown("Teleport
     States.TargetPlayer = selected
 end)
 updateTeleportDropdown(playerNames)
+
+CreateTextInput("Find Player", "Type name...", function(text)
+    local target = GetPlayerByName(text)
+    if target then
+        States.TargetPlayer = target.Name
+        for _, dd in ipairs(DropdownFrames) do
+            dd.Btn.Text = target.Name
+        end
+    end
+end)
 
 CreateButton("Teleport to Target", function()
     if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
@@ -599,9 +841,6 @@ CreateButton("Teleport to Car", function()
     end
 end)
 
--- ============================================
--- ESP TESTS
--- ============================================
 CreateSection("ESP TESTS")
 
 CreateToggle("Enable ESP", function(enabled)
@@ -883,17 +1122,15 @@ ESPConnection = RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ============================================
--- COMBAT TESTS
--- ============================================
 CreateSection("COMBAT TESTS")
 
 CreateToggle("Silent Aim", function(enabled)
     States.SilentAim = enabled
 end)
 
-CreateToggle("Aimbot", function(enabled)
+local AimbotToggleBtn, _, AimbotSetState = CreateToggle("Aimbot", function(enabled)
     States.Aimbot = enabled
+    AimbotWasEnabled = enabled
     if enabled then
         if AimbotConnection then AimbotConnection:Disconnect() end
         AimbotConnection = RunService.RenderStepped:Connect(function()
@@ -906,6 +1143,13 @@ CreateToggle("Aimbot", function(enabled)
                 if not p.Character then continue end
                 local head = p.Character:FindFirstChild("Head")
                 if not head then continue end
+                if States.AimbotOnlyEnemy then
+                    local myTeam = LocalPlayer.Team
+                    local theirTeam = p.Team
+                    if myTeam and theirTeam and myTeam == theirTeam then
+                        continue
+                    end
+                end
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
@@ -929,6 +1173,10 @@ CreateToggle("Aimbot", function(enabled)
             AimbotConnection = nil
         end
     end
+end)
+
+CreateToggle("Only Enemy", function(enabled)
+    States.AimbotOnlyEnemy = enabled
 end)
 
 CreateSlider("Aimbot FOV", 30, 300, 100, function(val)
@@ -967,9 +1215,6 @@ CreateButton("Kill All", function()
     end
 end)
 
--- ============================================
--- UTILITY TESTS
--- ============================================
 CreateSection("UTILITY TESTS")
 
 CreateToggle("Anti AFK", function(enabled)
@@ -1025,9 +1270,6 @@ CreateToggle("Show FPS", function(enabled)
     end
 end)
 
--- ============================================
--- CHARACTER TESTS
--- ============================================
 CreateSection("CHARACTER TESTS")
 
 CreateToggle("Rainbow Character", function(enabled)
@@ -1088,9 +1330,26 @@ CreateToggle("Glass Character", function(enabled)
     end
 end)
 
--- ============================================
--- FAKE TAGS TESTS
--- ============================================
+local GodModeToggleBtn, _, GodModeSetState = CreateToggle("God Mode", function(enabled)
+    States.GodMode = enabled
+    GodModeWasEnabled = enabled
+    if enabled then
+        StartGodMode()
+    else
+        StopGodMode()
+    end
+end)
+
+local InvisibleToggleBtn, _, InvisibleSetState = CreateToggle("Invisible", function(enabled)
+    States.Invisible = enabled
+    InvisibleWasEnabled = enabled
+    if enabled then
+        StartInvisible()
+    else
+        StopInvisible()
+    end
+end)
+
 CreateSection("FAKE TAGS TESTS")
 
 CreateToggle("Fake Admin", function(enabled)
@@ -1185,71 +1444,25 @@ CreateToggle("Chat Owner", function(enabled)
     States.ChatOwner = enabled
 end)
 
--- ============================================
--- CAR TESTS
--- ============================================
 CreateSection("CAR TESTS")
 
-CreateToggle("Fly Car", function(enabled)
+local FlyCarToggleBtn, _, FlyCarSetState = CreateToggle("Fly Car", function(enabled)
     States.FlyCar = enabled
+    FlyCarWasEnabled = enabled
     if enabled then
-        local flyCarConn
-        flyCarConn = RunService.RenderStepped:Connect(function()
-            if not States.FlyCar then
-                flyCarConn:Disconnect()
-                return
-            end
-            local seat = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and LocalPlayer.Character:FindFirstChildOfClass("Humanoid").SeatPart
-            if seat and seat:IsA("VehicleSeat") then
-                local car = seat:FindFirstAncestorOfClass("Model")
-                if car then
-                    local primary = car.PrimaryPart or car:FindFirstChild(" chassis") or car:FindFirstChild("VehicleSeat")
-                    if primary then
-                        local camCF = Camera.CFrame
-                        local dir = Vector3.new(0, 0, 0)
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                            dir = dir + camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                            dir = dir - camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                            dir = dir + Vector3.new(0, 1, 0)
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                            dir = dir - Vector3.new(0, 1, 0)
-                        end
-                        if dir.Magnitude > 0 then
-                            primary.Velocity = dir.Unit * States.FlySpeed
-                        end
-                    end
-                end
-            end
-        end)
+        StartFlyCar()
+    else
+        StopFlyCar()
     end
 end)
 
-CreateToggle("Car NoClip", function(enabled)
+local CarNoClipToggleBtn, _, CarNoClipSetState = CreateToggle("Car NoClip", function(enabled)
     States.CarNoClip = enabled
+    CarNoClipWasEnabled = enabled
     if enabled then
-        local carNoclipConn
-        carNoclipConn = RunService.Stepped:Connect(function()
-            if not States.CarNoClip then
-                carNoclipConn:Disconnect()
-                return
-            end
-            local seat = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and LocalPlayer.Character:FindFirstChildOfClass("Humanoid").SeatPart
-            if seat then
-                local car = seat:FindFirstAncestorOfClass("Model")
-                if car then
-                    for _, part in ipairs(car:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end
-        end)
+        StartCarNoClip()
+    else
+        StopCarNoClip()
     end
 end)
 
@@ -1257,25 +1470,27 @@ CreateSlider("Car Speed", 50, 500, 50, function(val)
     States.CarSpeed = val
 end)
 
--- ============================================
--- TROLL TESTS - AMMO (FIXED POSITIONING)
--- ============================================
 CreateSection("TROLL TESTS")
 
--- Dropdown Tanımlaması
 local ammoTargetDropdown, updateAmmoDropdown = CreateDynamicDropdown("Ammo Target", function(selected)
     States.TargetPlayer = selected
 end)
--- Oyunculari güncelle
 updateAmmoDropdown(playerNames)
 
--- Toggle Tanımlaması
+CreateTextInput("Find Ammo Target", "Type name...", function(text)
+    local target = GetPlayerByName(text)
+    if target then
+        States.TargetPlayer = target.Name
+        for _, dd in ipairs(DropdownFrames) do
+            dd.Btn.Text = target.Name
+        end
+    end
+end)
+
 CreateToggle("Ammo", function(enabled)
     States.AmmoActive = enabled
     if enabled then
         if AmmoConnection then AmmoConnection:Disconnect() end
-        
-        -- Noclip döngüsü
         local ammoNoclipConn = RunService.Stepped:Connect(function()
             if not States.AmmoActive then return end
             local char = LocalPlayer.Character
@@ -1285,41 +1500,26 @@ CreateToggle("Ammo", function(enabled)
                 end
             end
         end)
-
-        -- Ana Pozisyonlama Döngüsü
         AmmoConnection = RunService.RenderStepped:Connect(function()
             if not States.AmmoActive then
                 if ammoNoclipConn then ammoNoclipConn:Disconnect() end
                 return
             end
-
             local target = GetPlayerByName(States.TargetPlayer)
             local myChar = LocalPlayer.Character
             if not target or not target.Character or not myChar then return end
-            
             local targetHead = target.Character:FindFirstChild("Head")
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not targetHead or not myHRP then return end
-
-            -- 1. POZİSYON HESABI (Groin-to-Face)
-            -- Hedefin yüzünün önü
-            local frontOffset = targetHead.CFrame.LookVector * 0.6 
-            -- Karakteri dik tutarak yukarı taşıma (Eğilmeyi önler)
-            local heightOffset = Vector3.new(0, 1.0, 0) 
+            local frontOffset = targetHead.CFrame.LookVector * 0.6
+            local heightOffset = Vector3.new(0, 1.0, 0)
             local targetPosition = targetHead.Position + frontOffset + heightOffset
-
-            -- 2. GÜVENLİ C FRAME VE YÖNELİM (Açısız, Doğrudan Ters Vektör Yöntemi)
-            -- Hedefin LookVector'ünü tersine çevirerek karakterinin yüz yüze bakmasını sağlıyoruz
             local faceDirection = -targetHead.CFrame.LookVector
             local baseCF = CFrame.new(targetPosition, targetPosition + faceDirection)
-
-            -- İleri-geri hareket animasyonu
             local thrustOffset = math.sin(tick() * 10) * 0.3
             baseCF = baseCF * CFrame.new(0, 0, thrustOffset)
-
             myHRP.CFrame = baseCF
             myHRP.Velocity = Vector3.zero
-            
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
@@ -1328,7 +1528,6 @@ CreateToggle("Ammo", function(enabled)
         end)
     else
         if AmmoConnection then AmmoConnection:Disconnect() end
-        -- Kapatıldığında eski hale döndür
         local char = LocalPlayer.Character
         if char then
             for _, part in ipairs(char:GetDescendants()) do
@@ -1340,73 +1539,37 @@ CreateToggle("Ammo", function(enabled)
     end
 end)
 
--- ============================================
--- CLEANUP ON DEATH
--- ============================================
 LocalPlayer.CharacterAdded:Connect(function(newChar)
-    if FlyWasEnabled then
-        task.delay(0.5, function()
-            if FlyWasEnabled and not States.Fly then
-                local hum = newChar:FindFirstChildOfClass("Humanoid")
-                local hrp = newChar:FindFirstChild("HumanoidRootPart")
-                if hum and hrp then
-                    States.Fly = true
-                    hum.PlatformStand = true
-                    local bg = Instance.new("BodyGyro")
-                    bg.Name = "ACFlyGyro"
-                    bg.P = 9e4
-                    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-                    bg.CFrame = hrp.CFrame
-                    bg.Parent = hrp
-                    local bv = Instance.new("BodyVelocity")
-                    bv.Name = "ACFlyVelocity"
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-                    bv.Parent = hrp
-                    local flyConn
-                    flyConn = RunService.RenderStepped:Connect(function()
-                        if not States.Fly then
-                            flyConn:Disconnect()
-                            return
-                        end
-                        if not hrp or not hrp.Parent then
-                            flyConn:Disconnect()
-                            return
-                        end
-                        local camCF = Camera.CFrame
-                        local dir = Vector3.new(0, 0, 0)
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                            dir = dir + camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                            dir = dir - camCF.LookVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                            dir = dir - camCF.RightVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                            dir = dir + camCF.RightVector
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                            dir = dir + Vector3.new(0, 1, 0)
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                            dir = dir - Vector3.new(0, 1, 0)
-                        end
-                        if dir.Magnitude > 0 then
-                            dir = dir.Unit * States.FlySpeed
-                        end
-                        bv.Velocity = dir
-                        bg.CFrame = camCF
-                    end)
-                end
-            end
-        end)
-    end
-
-    States.NoClip = false
-    States.AmmoActive = false
-    States.Aimbot = false
+    task.delay(0.5, function()
+        if FlyWasEnabled and not States.Fly then
+            States.Fly = true
+            FlySetState(true)
+        end
+        if NoClipWasEnabled and not States.NoClip then
+            States.NoClip = true
+            NoClipSetState(true)
+        end
+        if AimbotWasEnabled and not States.Aimbot then
+            States.Aimbot = true
+            AimbotSetState(true)
+        end
+        if GodModeWasEnabled and not States.GodMode then
+            States.GodMode = true
+            GodModeSetState(true)
+        end
+        if InvisibleWasEnabled and not States.Invisible then
+            States.Invisible = true
+            InvisibleSetState(true)
+        end
+        if FlyCarWasEnabled and not States.FlyCar then
+            States.FlyCar = true
+            FlyCarSetState(true)
+        end
+        if CarNoClipWasEnabled and not States.CarNoClip then
+            States.CarNoClip = true
+            CarNoClipSetState(true)
+        end
+    end)
 
     ClearAllESP()
 
@@ -1418,37 +1581,14 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
         OwnerBillboard:Destroy()
         OwnerBillboard = nil
     end
-
-    if RainbowConnection then
-        RainbowConnection:Disconnect()
-        RainbowConnection = nil
-    end
-    if GlassConnection then
-        GlassConnection:Disconnect()
-        GlassConnection = nil
-    end
-    if AmmoConnection then
-        AmmoConnection:Disconnect()
-        AmmoConnection = nil
-    end
-    if AimbotConnection then
-        AimbotConnection:Disconnect()
-        AimbotConnection = nil
-    end
 end)
 
--- ============================================
--- TOGGLE MENU WITH INSERT KEY
--- ============================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
 
--- ============================================
--- INITIAL NOTIFICATION
--- ============================================
 local notif = Instance.new("TextLabel")
 notif.Size = UDim2.new(0, 320, 0, 40)
 notif.Position = UDim2.new(0.5, -160, 0, 20)
@@ -1468,3 +1608,7 @@ task.delay(5, function()
 end)
 
 print("intabazaki.lua v3.0 loaded successfully")
+'''
+
+print(f"Fixed script length: {len(fixed_script)} chars")
+print(f"Lines: {len(fixed_script.splitlines())}")
