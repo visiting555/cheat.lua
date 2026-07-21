@@ -412,8 +412,6 @@ local InvisibleWasEnabled = false
 local FlyCarWasEnabled = false
 local CarNoClipWasEnabled = false
 local MagicBulletWasEnabled = false
-local InvisibleClone = nil
-local InvisibleOriginal = nil
 
 local function GetPlayerNames()
     local names = {}
@@ -590,38 +588,19 @@ end
 
 local function StartGodMode()
     if GodModeConnection then GodModeConnection:Disconnect() end
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-
-    local mt = getrawmetatable and getrawmetatable(game)
-    if mt and mt.__index then
-        local oldIndex = mt.__index
-        setreadonly(mt, false)
-        mt.__index = newcclosure(function(self, key)
-            if self == hum and key == "Health" then
-                return 100
-            end
-            if self == hum and key == "MaxHealth" then
-                return 100
-            end
-            return oldIndex(self, key)
-        end)
-        setreadonly(mt, true)
-    end
-
     GodModeConnection = RunService.RenderStepped:Connect(function()
         if not States.GodMode then return end
         local char = LocalPlayer.Character
         if not char then return end
         local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            pcall(function()
-                hum.Health = 100
-                hum.MaxHealth = 100
-            end)
-        end
+        if not hum then return end
+        pcall(function()
+            hum.Health = hum.MaxHealth
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+            hum.BreakJointsOnDeath = false
+            hum.RequiresNeck = false
+        end)
     end)
 end
 
@@ -630,20 +609,35 @@ local function StopGodMode()
         GodModeConnection:Disconnect()
         GodModeConnection = nil
     end
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            pcall(function()
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+                hum.BreakJointsOnDeath = true
+                hum.RequiresNeck = true
+            end)
+        end
+    end
 end
+
+local InvisibleClone = nil
+local InvisibleOriginal = nil
 
 local function StartInvisible()
     if InvisibleConnection then InvisibleConnection:Disconnect() end
     local char = LocalPlayer.Character
     if not char then return end
-
+    
     InvisibleOriginal = char
     char.Archivable = true
-
+    
     local clone = char:Clone()
     if not clone then return end
     InvisibleClone = clone
-
+    
     for _, part in ipairs(clone:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Transparency = 1
@@ -655,24 +649,24 @@ local function StartInvisible()
             part.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
         end
     end
-
+    
     clone.Parent = Workspace
-
+    
     local originalHRP = char:FindFirstChild("HumanoidRootPart")
     local cloneHRP = clone:FindFirstChild("HumanoidRootPart")
-
+    
     InvisibleConnection = RunService.RenderStepped:Connect(function()
         if not States.Invisible then return end
         if not char or not char.Parent then return end
         if not clone or not clone.Parent then return end
-
+        
         local origHRP = char:FindFirstChild("HumanoidRootPart")
         local clHRP = clone:FindFirstChild("HumanoidRootPart")
-
+        
         if origHRP and clHRP then
             clHRP.CFrame = origHRP.CFrame
         end
-
+        
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                 part.Transparency = 1
@@ -810,34 +804,38 @@ local function StartMagicBullet()
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
-
+        
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.Name:lower():find("bullet") or obj.Name:lower():find("projectile") or obj.Name:lower():find("shot") then
-                local closestPlayer = nil
-                local closestDist = math.huge
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p == LocalPlayer then continue end
-                    if not p.Character then continue end
-                    local targetHead = p.Character:FindFirstChild("Head")
-                    if not targetHead then continue end
-                    if States.AimbotOnlyEnemy then
-                        local myTeam = LocalPlayer.Team
-                        local theirTeam = p.Team
-                        if myTeam and theirTeam and myTeam == theirTeam then
-                            continue
+            if obj:IsA("BasePart") then
+                local name = obj.Name:lower()
+                if name:find("bullet") or name:find("projectile") or name:find("shot") or name:find("tracer") or name:find("shell") then
+                    local closestPlayer = nil
+                    local closestDist = math.huge
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p == LocalPlayer then continue end
+                        if not p.Character then continue end
+                        local targetHead = p.Character:FindFirstChild("Head")
+                        if not targetHead then continue end
+                        if States.AimbotOnlyEnemy then
+                            local myTeam = LocalPlayer.Team
+                            local theirTeam = p.Team
+                            if myTeam and theirTeam and myTeam == theirTeam then
+                                continue
+                            end
+                        end
+                        local dist = (targetHead.Position - obj.Position).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closestPlayer = p
                         end
                     end
-                    local dist = (targetHead.Position - obj.Position).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestPlayer = p
-                    end
-                end
-                if closestPlayer and closestPlayer.Character then
-                    local targetHead = closestPlayer.Character:FindFirstChild("Head")
-                    if targetHead then
-                        obj.CFrame = CFrame.new(targetHead.Position)
-                        obj.Velocity = Vector3.new(0, 0, 0)
+                    if closestPlayer and closestPlayer.Character then
+                        local targetHead = closestPlayer.Character:FindFirstChild("Head")
+                        if targetHead then
+                            obj.CFrame = CFrame.new(targetHead.Position)
+                            obj.Velocity = Vector3.new(0, 0, 0)
+                            obj.CanCollide = false
+                        end
                     end
                 end
             end
