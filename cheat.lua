@@ -1,6 +1,3 @@
--- VISITING SOFTWARE v3.0 - Industrial Grade
--- Tüm özellikler çalışır, hata yönetimi, config kaydı, modüler yapı.
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -8,8 +5,10 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "VISITING_SOFTWARE"
@@ -35,7 +34,7 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 450, 0, 640)
+MainFrame.Size = UDim2.new(0, 450, 0, 650)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 20)
 MainFrame.BorderSizePixel = 0
@@ -70,7 +69,7 @@ TitleText.Name = "TitleText"
 TitleText.Size = UDim2.new(1, -70, 1, 0)
 TitleText.Position = UDim2.new(0, 20, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "VISITING SOFTWARE v3"
+TitleText.Text = "VISITING SOFTWARE"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.Font = Enum.Font.GothamBlack
 TitleText.TextSize = 20
@@ -108,8 +107,6 @@ ScrollFrame.Parent = MainFrame
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Padding = UDim.new(0, 10)
 UIListLayout.Parent = ScrollFrame
-
--- ==================== UI ELEMANLARI ====================
 
 local function CreateSection(text)
     local section = Instance.new("Frame")
@@ -160,8 +157,8 @@ local function CreateToggle(text, callback)
     label.Position = UDim2.new(0, 16, 0, 0)
     label.Parent = frame
     local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 64, 0, 28)
-    toggleBtn.Position = UDim2.new(1, -78, 0.5, -14)
+    toggleBtn.Size = UDim2.new(0, 60, 0, 28)
+    toggleBtn.Position = UDim2.new(1, -76, 0.5, -14)
     toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
     toggleBtn.Text = "OFF"
     toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -467,8 +464,6 @@ local function CreateColorPicker(text, callback)
     return frame
 end
 
--- ==================== STATE VE BAĞLANTILAR ====================
-
 local States = {
     Fly = false, FlySpeed = 50, NoClip = false, WalkSpeed = 16,
     ESP = false, ESPChams = false, ESPBox = false, ESPName = false,
@@ -485,7 +480,6 @@ local States = {
     SpectateActive = false, SpectatePlayer = nil
 }
 
-local Connections = {}
 local ESPObjects = {}
 local FPSLabel = nil
 local AdminBillboard = nil
@@ -505,20 +499,6 @@ local InvisibleConnection = nil
 local MagicBulletConnection = nil
 local TriggerBotConnection = nil
 local SpectateConnection = nil
-
--- Flag'ler respawn için
-local FlyWasEnabled = false
-local NoClipWasEnabled = false
-local AimbotWasEnabled = false
-local GodModeWasEnabled = false
-local InvisibleWasEnabled = false
-local FlyCarWasEnabled = false
-local CarNoClipWasEnabled = false
-local MagicBulletWasEnabled = false
-local TriggerBotWasEnabled = false
-local SpectateWasEnabled = false
-
--- ==================== YARDIMCI FONKSİYONLAR ====================
 
 local function GetPlayerNames()
     local names = {}
@@ -541,12 +521,12 @@ end
 local function UpdateAllDropdowns()
     local names = GetPlayerNames()
     for _, dd in ipairs(DropdownFrames) do
-        pcall(dd.Update, names)
+        dd.Update(names)
     end
 end
 
-Players.PlayerAdded:Connect(function() task.wait(0.5); UpdateAllDropdowns() end)
-Players.PlayerRemoving:Connect(function() task.wait(0.5); UpdateAllDropdowns() end)
+Players.PlayerAdded:Connect(function() task.delay(0.5, UpdateAllDropdowns) end)
+Players.PlayerRemoving:Connect(function() task.delay(0.5, UpdateAllDropdowns) end)
 
 local function ClearESPForPlayer(player)
     if ESPObjects[player] then
@@ -565,14 +545,11 @@ local function ClearAllESP()
     ESPObjects = {}
 end
 
--- ==================== KILL ====================
-
 local function KillPlayer(player)
     if not player or not player.Character then return end
     local char = player.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
-
     for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
         if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
             local n = v.Name:lower()
@@ -587,7 +564,6 @@ local function KillPlayer(player)
             end
         end
     end
-
     pcall(function() char:BreakJoints() end)
     pcall(function()
         local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -597,8 +573,6 @@ local function KillPlayer(player)
         end
     end)
 end
-
--- ==================== FLY ====================
 
 local function StartFly()
     if FlyConnection then FlyConnection:Disconnect() end
@@ -641,8 +615,6 @@ local function StopFly()
     end
 end
 
--- ==================== NOCLIP ====================
-
 local function StartNoClip()
     if NoClipConnection then NoClipConnection:Disconnect() end
     NoClipConnection = RunService.Stepped:Connect(function()
@@ -666,75 +638,59 @@ local function StopNoClip()
     end
 end
 
--- ==================== GODMODE (AGRESIF) ====================
-
 local function StartGodMode()
     if GodModeConnection then GodModeConnection:Disconnect() end
-    -- Her frame'de health'i max'e çek
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.Health = hum.MaxHealth
+        end
+    end
     GodModeConnection = RunService.RenderStepped:Connect(function()
         if not States.GodMode then return end
-        local char = LocalPlayer.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health < hum.MaxHealth then
-                hum.Health = hum.MaxHealth
+        local c = LocalPlayer.Character
+        if c then
+            local h = c:FindFirstChildOfClass("Humanoid")
+            if h and h.Health < h.MaxHealth then
+                h.Health = h.MaxHealth
             end
         end
     end)
-    -- Ayrıca property change yakala (daha hızlı)
-    local function onCharAdded(char)
+    local function onCharAdded(c)
         if States.GodMode then
-            local hum = char:WaitForChild("Humanoid", 5)
-            if hum then
-                hum.Health = hum.MaxHealth
-                local conn
-                conn = hum:GetPropertyChangedSignal("Health"):Connect(function()
-                    if States.GodMode and hum and hum.Parent then
-                        if hum.Health < hum.MaxHealth then
-                            hum.Health = hum.MaxHealth
-                        end
-                    end
-                end)
-                -- bağlantıyı sakla
-                if not Connections.GodModeProp then Connections.GodModeProp = {} end
-                table.insert(Connections.GodModeProp, conn)
-            end
+            task.wait(0.1)
+            local h = c:FindFirstChildOfClass("Humanoid")
+            if h then h.Health = h.MaxHealth end
         end
     end
-    if LocalPlayer.Character then
-        onCharAdded(LocalPlayer.Character)
-    end
+    if LocalPlayer.Character then onCharAdded(LocalPlayer.Character) end
     LocalPlayer.CharacterAdded:Connect(onCharAdded)
 end
 
 local function StopGodMode()
     if GodModeConnection then GodModeConnection:Disconnect(); GodModeConnection = nil end
-    if Connections.GodModeProp then
-        for _, c in ipairs(Connections.GodModeProp) do
-            c:Disconnect()
-        end
-        Connections.GodModeProp = {}
-    end
 end
-
--- ==================== INVISIBLE (AGRESIF) ====================
 
 local function ApplyInvisible(char)
     if not char then return end
     for _, part in ipairs(char:GetDescendants()) do
-        pcall(function()
-            if part:IsA("BasePart") then
-                part.Transparency = 1
-                part.CanCollide = false
-                part.Material = Enum.Material.ForceField
-            elseif part:IsA("Decal") or part:IsA("Texture") then
-                part.Transparency = 1
-            end
-        end)
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+            part.CanCollide = false
+            part.Material = Enum.Material.ForceField
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 1
+        end
     end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then
         hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+    end
+    for _, v in ipairs(char:GetDescendants()) do
+        if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") then
+            v.Enabled = false
+        end
     end
 end
 
@@ -745,17 +701,19 @@ local function StartInvisible()
         local char = LocalPlayer.Character
         if char and char.Parent then ApplyInvisible(char) end
     end)
-    LocalPlayer.CharacterAdded:Connect(function(char)
-        if States.Invisible then task.wait(0.1); ApplyInvisible(char) end
-    end)
+    local function onCharAdded(c)
+        if States.Invisible then
+            task.wait(0.1)
+            ApplyInvisible(c)
+        end
+    end
     if LocalPlayer.Character then ApplyInvisible(LocalPlayer.Character) end
+    LocalPlayer.CharacterAdded:Connect(onCharAdded)
 end
 
 local function StopInvisible()
     if InvisibleConnection then InvisibleConnection:Disconnect(); InvisibleConnection = nil end
 end
-
--- ==================== FLYCAR ====================
 
 local function StartFlyCar()
     if FlyCarConnection then FlyCarConnection:Disconnect() end
@@ -795,8 +753,6 @@ local function StopFlyCar()
     if FlyCarConnection then FlyCarConnection:Disconnect(); FlyCarConnection = nil end
 end
 
--- ==================== CAR NOCLIP ====================
-
 local function StartCarNoClip()
     if CarNoClipConnection then CarNoClipConnection:Disconnect() end
     CarNoClipConnection = RunService.Stepped:Connect(function()
@@ -817,58 +773,65 @@ local function StopCarNoClip()
     if CarNoClipConnection then CarNoClipConnection:Disconnect(); CarNoClipConnection = nil end
 end
 
--- ==================== MAGIC BULLET ====================
-
+local bulletCache = {}
 local function StartMagicBullet()
     if MagicBulletConnection then MagicBulletConnection:Disconnect() end
-    MagicBulletConnection = RunService.Heartbeat:Connect(function()
+    MagicBulletConnection = RunService.Stepped:Connect(function()
         if not States.MagicBullet then return end
         local char = LocalPlayer.Character
         if not char then return end
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.Velocity.Magnitude > 10 then
-                local n = obj.Name:lower()
-                if n:find("bullet") or n:find("projectile") or n:find("shell") then
-                    local closestPlayer, closestDist = nil, 500
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Character then
-                            local head = p.Character:FindFirstChild("Head")
-                            if head then
-                                local dist = (head.Position - obj.Position).Magnitude
-                                if dist < closestDist then
-                                    if not States.AimbotOnlyEnemy or (LocalPlayer.Team and p.Team and LocalPlayer.Team ~= p.Team) then
-                                        closestDist = dist
-                                        closestPlayer = p
+        local now = tick()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            for _, child in ipairs(obj:GetDescendants()) do
+                if child:IsA("BasePart") and child.Velocity.Magnitude > 20 then
+                    local n = child.Name:lower()
+                    if n:find("bullet") or n:find("projectile") or n:find("shell") or n:find("rocket") then
+                        if not bulletCache[child] or bulletCache[child] < now - 0.5 then
+                            bulletCache[child] = now
+                            local closestPlayer, closestDist = nil, 300
+                            for _, p in ipairs(Players:GetPlayers()) do
+                                if p ~= LocalPlayer and p.Character then
+                                    local head = p.Character:FindFirstChild("Head")
+                                    if head then
+                                        local dist = (head.Position - child.Position).Magnitude
+                                        if dist < closestDist then
+                                            if not States.AimbotOnlyEnemy or (LocalPlayer.Team and p.Team and LocalPlayer.Team ~= p.Team) then
+                                                closestDist = dist
+                                                closestPlayer = p
+                                            end
+                                        end
                                     end
+                                end
+                            end
+                            if closestPlayer and closestPlayer.Character then
+                                local head = closestPlayer.Character:FindFirstChild("Head")
+                                if head then
+                                    child.CFrame = CFrame.new(head.Position)
+                                    child.Velocity = Vector3.new()
+                                    child.CanCollide = false
                                 end
                             end
                         end
                     end
-                    if closestPlayer and closestPlayer.Character then
-                        local head = closestPlayer.Character:FindFirstChild("Head")
-                        if head then
-                            obj.CFrame = CFrame.new(head.Position)
-                            obj.Velocity = Vector3.new()
-                            obj.CanCollide = false
-                        end
-                    end
                 end
             end
+        end
+        for k, v in pairs(bulletCache) do
+            if v < now - 2 then bulletCache[k] = nil end
         end
     end)
 end
 
 local function StopMagicBullet()
     if MagicBulletConnection then MagicBulletConnection:Disconnect(); MagicBulletConnection = nil end
+    bulletCache = {}
 end
-
--- ==================== TRIGGERBOT (AGRESIF) ====================
 
 local function StartTriggerBot()
     if TriggerBotConnection then TriggerBotConnection:Disconnect() end
     TriggerBotConnection = RunService.RenderStepped:Connect(function()
         if not States.TriggerBot then return end
-        local closestPlayer, closestDist = nil, 120
+        local closestPlayer, closestDist = nil, 150
         local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
         for _, p in ipairs(Players:GetPlayers()) do
             if p == LocalPlayer then continue end
@@ -883,14 +846,25 @@ local function StartTriggerBot()
             local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
             if onScreen then
                 local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                if dist < closestDist then closestDist = dist; closestPlayer = p end
+                if dist < closestDist then
+                    closestDist = dist
+                    closestPlayer = p
+                end
             end
         end
         if closestPlayer then
-            -- Simüle tıklama (gerçek mouse tıklaması göndermez ama test için yeterli)
-            UserInputService:SendInputEvent(Enum.UserInputType.MouseButton1, true)
-            task.wait(0.05)
-            UserInputService:SendInputEvent(Enum.UserInputType.MouseButton1, false)
+            pcall(function()
+                if Mouse then
+                    Mouse.Button1Down:Fire()
+                    task.wait(0.03)
+                    Mouse.Button1Up:Fire()
+                end
+                for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if v:IsA("RemoteEvent") and (v.Name:lower():find("shoot") or v.Name:lower():find("fire") or v.Name:lower():find("attack")) then
+                        v:FireServer()
+                    end
+                end
+            end)
         end
     end)
 end
@@ -898,8 +872,6 @@ end
 local function StopTriggerBot()
     if TriggerBotConnection then TriggerBotConnection:Disconnect(); TriggerBotConnection = nil end
 end
-
--- ==================== AIMBOT ====================
 
 local function StartAimbot()
     if AimbotConnection then AimbotConnection:Disconnect() end
@@ -935,8 +907,6 @@ end
 local function StopAimbot()
     if AimbotConnection then AimbotConnection:Disconnect(); AimbotConnection = nil end
 end
-
--- ==================== ESP ====================
 
 local function GetSkeletonJoints(char)
     local joints = {}
@@ -974,8 +944,6 @@ local function StartESP()
             if (hrp.Position - myHRP.Position).Magnitude > 1500 then ClearESPForPlayer(p); continue end
             if not ESPObjects[p] then ESPObjects[p] = {} end
             local esp = ESPObjects[p]
-
-            -- Chams
             if States.ESPChams then
                 if not esp.ChamsList then
                     esp.ChamsList = {}
@@ -1000,8 +968,6 @@ local function StartESP()
                     esp.ChamsList = nil
                 end
             end
-
-            -- Box
             if States.ESPBox then
                 if not esp.Box then
                     esp.Box = Drawing.new("Square"); esp.Box.Thickness = 2; esp.Box.Filled = false; esp.Box.Color = States.ESPColor
@@ -1020,8 +986,6 @@ local function StartESP()
                     else esp.Box.Visible = false end
                 else esp.Box.Visible = false end
             elseif esp.Box then esp.Box.Visible = false end
-
-            -- Name
             if States.ESPName then
                 if not esp.Name then
                     esp.Name = Drawing.new("Text"); esp.Name.Size = 14; esp.Name.Outline = true; esp.Name.Center = true; esp.Name.Color = States.ESPColor
@@ -1034,8 +998,6 @@ local function StartESP()
                     else esp.Name.Visible = false end
                 else esp.Name.Visible = false end
             elseif esp.Name then esp.Name.Visible = false end
-
-            -- Skeleton
             if States.ESPSkeleton then
                 if not esp.Skeleton then
                     esp.Skeleton = {}
@@ -1061,8 +1023,6 @@ local function StartESP()
             elseif esp.Skeleton then
                 for _, line in ipairs(esp.Skeleton) do line.Visible = false end
             end
-
-            -- Tracer
             if States.ESPTracer then
                 if not esp.Tracer then
                     esp.Tracer = Drawing.new("Line"); esp.Tracer.Thickness = 1; esp.Tracer.Color = States.ESPColor
@@ -1075,8 +1035,6 @@ local function StartESP()
         end
     end)
 end
-
--- ==================== SPECTATE ====================
 
 local function StartSpectate()
     if SpectateConnection then SpectateConnection:Disconnect() end
@@ -1106,8 +1064,6 @@ local function StopSpectate()
     Camera.CameraSubject = LocalPlayer.Character
     Camera.CameraType = Enum.CameraType.Custom
 end
-
--- ==================== RAINBOW / GLASS ====================
 
 local function StartRainbow()
     if RainbowConnection then RainbowConnection:Disconnect() end
@@ -1151,8 +1107,6 @@ local function StopGlass()
     end
 end
 
--- ==================== ANTIAFK ====================
-
 local function ToggleAntiAFK(enabled)
     States.AntiAFK = enabled
     if enabled then
@@ -1164,8 +1118,6 @@ local function ToggleAntiAFK(enabled)
         if AFKConnection then AFKConnection:Disconnect(); AFKConnection = nil end
     end
 end
-
--- ==================== FPS ====================
 
 local function ToggleFPS(enabled)
     States.ShowFPS = enabled
@@ -1190,8 +1142,6 @@ local function ToggleFPS(enabled)
         if FPSLabel then FPSLabel.Visible = false end
     end
 end
-
--- ==================== FAKE TAGS ====================
 
 local function UpdateFakeAdmin()
     if AdminBillboard then AdminBillboard:Destroy() end
@@ -1221,12 +1171,11 @@ local function UpdateFakeOwner()
     end
 end
 
--- ==================== AMMO TROLL ====================
-
 local function ToggleAmmo(enabled)
     States.AmmoActive = enabled
     if enabled then
         if AmmoConnection then AmmoConnection:Disconnect() end
+        local noclipConn
         AmmoConnection = RunService.RenderStepped:Connect(function()
             if not States.AmmoActive then return end
             local target = GetPlayerByName(States.AmmoTarget)
@@ -1243,16 +1192,14 @@ local function ToggleAmmo(enabled)
             local hum = myChar:FindFirstChildOfClass("Humanoid")
             if hum then hum.PlatformStand = true end
         end)
-        -- NoClip'te ekle
-        local function ammoNoClip()
+        noclipConn = RunService.Stepped:Connect(function()
             if not States.AmmoActive then return end
             local char = LocalPlayer.Character
             if char then for _, v in ipairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
-        end
-        Connections.AmmoNoClip = RunService.Stepped:Connect(ammoNoClip)
+        end)
+        AmmoConnection = AmmoConnection 
     else
-        if AmmoConnection then AmmoConnection:Disconnect(); AmmoConnection = nil end
-        if Connections.AmmoNoClip then Connections.AmmoNoClip:Disconnect(); Connections.AmmoNoClip = nil end
+        if AmmoConnection then AmmoConnection:Disconnect() end
         local char = LocalPlayer.Character
         if char then
             for _, v in ipairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = true end end
@@ -1262,13 +1209,11 @@ local function ToggleAmmo(enabled)
     end
 end
 
--- ==================== UI OLUŞTUR ====================
-
 CreateSection("MOVEMENT")
 CreateSlider("WalkSpeed", 16, 500, 16, function(val) States.WalkSpeed = val; if LocalPlayer.Character then local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if hum then hum.WalkSpeed = val end end end)
 CreateSlider("Fly Speed", 10, 200, 50, function(val) States.FlySpeed = val end)
-local _, _, FlySetState = CreateToggle("Fly", function(enabled) States.Fly = enabled; FlyWasEnabled = enabled; if enabled then StartFly() else StopFly() end end)
-local _, _, NoClipSetState = CreateToggle("NoClip", function(enabled) States.NoClip = enabled; NoClipWasEnabled = enabled; if enabled then StartNoClip() else StopNoClip() end end)
+CreateToggle("Fly", function(enabled) States.Fly = enabled; if enabled then StartFly() else StopFly() end end)
+CreateToggle("NoClip", function(enabled) States.NoClip = enabled; if enabled then StartNoClip() else StopNoClip() end end)
 
 CreateSection("TELEPORT")
 local playerNames = GetPlayerNames()
@@ -1325,12 +1270,12 @@ StartESP()
 
 CreateSection("COMBAT")
 CreateToggle("Silent Aim", function(enabled) States.SilentAim = enabled end)
-local _, _, AimbotSetState = CreateToggle("Aimbot", function(enabled) States.Aimbot = enabled; AimbotWasEnabled = enabled; if enabled then StartAimbot() else StopAimbot() end end)
+CreateToggle("Aimbot", function(enabled) States.Aimbot = enabled; if enabled then StartAimbot() else StopAimbot() end end)
 CreateToggle("Only Enemy", function(enabled) States.AimbotOnlyEnemy = enabled end)
 CreateSlider("Aimbot FOV", 30, 300, 100, function(val) States.AimbotFOV = val end)
 CreateSlider("Aimbot Smooth", 1, 100, 50, function(val) States.AimbotSmoothness = val/100 end)
-local _, _, MagicBulletSetState = CreateToggle("Magic Bullet", function(enabled) States.MagicBullet = enabled; MagicBulletWasEnabled = enabled; if enabled then StartMagicBullet() else StopMagicBullet() end end)
-local _, _, TriggerBotSetState = CreateToggle("TriggerBot", function(enabled) States.TriggerBot = enabled; TriggerBotWasEnabled = enabled; if enabled then StartTriggerBot() else StopTriggerBot() end end)
+CreateToggle("Magic Bullet", function(enabled) States.MagicBullet = enabled; if enabled then StartMagicBullet() else StopMagicBullet() end end)
+CreateToggle("TriggerBot", function(enabled) States.TriggerBot = enabled; if enabled then StartTriggerBot() else StopTriggerBot() end end)
 local killDropdown, updateKill = CreateDynamicDropdown("Kill Target", function(sel) States.TargetPlayer = sel end)
 updateKill(playerNames)
 CreateButton("Kill Target", function() if States.TargetPlayer and States.TargetPlayer ~= "No Players" then KillPlayer(GetPlayerByName(States.TargetPlayer)) end end)
@@ -1339,7 +1284,7 @@ CreateButton("Kill All", function() for _, p in ipairs(Players:GetPlayers()) do 
 CreateSection("SPECTATE")
 local specDropdown, updateSpec = CreateDynamicDropdown("Spectate Player", function(sel) States.SpectatePlayer = sel end)
 updateSpec(playerNames)
-local _, _, SpectateSetState = CreateToggle("Spectate", function(enabled) States.SpectateActive = enabled; SpectateWasEnabled = enabled; if enabled then StartSpectate() else StopSpectate() end end)
+CreateToggle("Spectate", function(enabled) States.SpectateActive = enabled; if enabled then StartSpectate() else StopSpectate() end end)
 
 CreateSection("UTILITY")
 CreateToggle("Anti AFK", ToggleAntiAFK)
@@ -1349,8 +1294,8 @@ CreateToggle("Show FPS", ToggleFPS)
 CreateSection("CHARACTER")
 CreateToggle("Rainbow Character", function(enabled) States.RainbowChar = enabled; if enabled then StartRainbow() else StopRainbow() end end)
 CreateToggle("Glass Character", function(enabled) States.GlassChar = enabled; if enabled then StartGlass() else StopGlass() end end)
-local _, _, GodModeSetState = CreateToggle("God Mode", function(enabled) States.GodMode = enabled; GodModeWasEnabled = enabled; if enabled then StartGodMode() else StopGodMode() end end)
-local _, _, InvisibleSetState = CreateToggle("Invisible", function(enabled) States.Invisible = enabled; InvisibleWasEnabled = enabled; if enabled then StartInvisible() else StopInvisible() end end)
+CreateToggle("God Mode", function(enabled) States.GodMode = enabled; if enabled then StartGodMode() else StopGodMode() end end)
+CreateToggle("Invisible", function(enabled) States.Invisible = enabled; if enabled then StartInvisible() else StopInvisible() end end)
 
 CreateSection("FAKE TAGS")
 CreateToggle("Fake Admin", function(enabled) States.FakeAdmin = enabled; UpdateFakeAdmin() end)
@@ -1359,8 +1304,8 @@ CreateToggle("Fake Owner", function(enabled) States.FakeOwner = enabled; UpdateF
 CreateColorPicker("Owner Color", function(color) States.FakeOwnerColor = color; if OwnerBillboard then OwnerBillboard:FindFirstChildOfClass("TextLabel").TextColor3 = color end end)
 
 CreateSection("CAR")
-local _, _, FlyCarSetState = CreateToggle("Fly Car", function(enabled) States.FlyCar = enabled; FlyCarWasEnabled = enabled; if enabled then StartFlyCar() else StopFlyCar() end end)
-local _, _, CarNoClipSetState = CreateToggle("Car NoClip", function(enabled) States.CarNoClip = enabled; CarNoClipWasEnabled = enabled; if enabled then StartCarNoClip() else StopCarNoClip() end end)
+CreateToggle("Fly Car", function(enabled) States.FlyCar = enabled; if enabled then StartFlyCar() else StopFlyCar() end end)
+CreateToggle("Car NoClip", function(enabled) States.CarNoClip = enabled; if enabled then StartCarNoClip() else StopCarNoClip() end end)
 CreateSlider("Car Speed", 50, 500, 50, function(val) States.CarSpeed = val end)
 
 CreateSection("TROLL")
@@ -1375,20 +1320,23 @@ CreateTextInput("Find Ammo Target", "Type name...", function(text)
 end)
 CreateToggle("Ammo", ToggleAmmo)
 
--- ==================== RESPAWN HAFIZA ====================
+local function ResetAllStates()
+    States.Fly = false; States.NoClip = false; States.Aimbot = false; States.GodMode = false; States.Invisible = false; States.MagicBullet = false; States.TriggerBot = false; States.SpectateActive = false; States.FlyCar = false; States.CarNoClip = false
+    StopFly(); StopNoClip(); StopAimbot(); StopGodMode(); StopInvisible(); StopMagicBullet(); StopTriggerBot(); StopSpectate(); StopFlyCar(); StopCarNoClip()
+end
 
 LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
-    if FlyWasEnabled then States.Fly = true; StartFly() end
-    if NoClipWasEnabled then States.NoClip = true; StartNoClip() end
-    if AimbotWasEnabled then States.Aimbot = true; StartAimbot() end
-    if GodModeWasEnabled then States.GodMode = true; StartGodMode() end
-    if InvisibleWasEnabled then States.Invisible = true; StartInvisible() end
-    if FlyCarWasEnabled then States.FlyCar = true; StartFlyCar() end
-    if CarNoClipWasEnabled then States.CarNoClip = true; StartCarNoClip() end
-    if MagicBulletWasEnabled then States.MagicBullet = true; StartMagicBullet() end
-    if TriggerBotWasEnabled then States.TriggerBot = true; StartTriggerBot() end
-    if SpectateWasEnabled then States.SpectateActive = true; StartSpectate() end
+    task.wait(0.3)
+    if States.Fly then StartFly() end
+    if States.NoClip then StartNoClip() end
+    if States.Aimbot then StartAimbot() end
+    if States.GodMode then StartGodMode() end
+    if States.Invisible then StartInvisible() end
+    if States.FlyCar then StartFlyCar() end
+    if States.CarNoClip then StartCarNoClip() end
+    if States.MagicBullet then StartMagicBullet() end
+    if States.TriggerBot then StartTriggerBot() end
+    if States.SpectateActive then StartSpectate() end
     ClearAllESP()
     if AdminBillboard then AdminBillboard:Destroy(); AdminBillboard = nil end
     if OwnerBillboard then OwnerBillboard:Destroy(); OwnerBillboard = nil end
@@ -1396,23 +1344,23 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     if States.FakeOwner then UpdateFakeOwner() end
 end)
 
--- ==================== INSERT GİZLE/GÖSTER ====================
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
         MainFrame.Visible = not MainFrame.Visible
     end
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.End then
+        ResetAllStates()
+        MainFrame.Visible = false
+    end
 end)
-
--- ==================== BİLDİRİM ====================
 
 local notif = Instance.new("TextLabel")
 notif.Size = UDim2.new(0, 380, 0, 48); notif.Position = UDim2.new(0.5, -190, 0, 30)
-notif.BackgroundColor3 = Color3.fromRGB(10, 12, 20); notif.Text = "VISITING SOFTWARE v3 | Press INSERT"
+notif.BackgroundColor3 = Color3.fromRGB(10, 12, 20); notif.Text = "VISITING SOFTWARE | Press INSERT | END to kill"
 notif.TextColor3 = Color3.fromRGB(0, 180, 255); notif.Font = Enum.Font.GothamBold; notif.TextSize = 16
 notif.Parent = ScreenGui
 Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 14)
 CreateShadow(notif, UDim2.new(1, 40, 1, 40), UDim2.new(0.5, 0, 0.5, 0), 0.6)
 task.delay(5, function() notif:Destroy() end)
 
-print("VISITING SOFTWARE v3 loaded successfully.")
+print("VISITING SOFTWARE v3.0 Ticari Sürüm Yüklendi - Sadece Test Amaçlıdır.")
