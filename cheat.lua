@@ -1,4 +1,4 @@
--- VISITING v11 - HOTKEYS KATEGORİSİ + GELİŞMİŞ AIMBOT
+-- VISITING v11 - COMPLETE + HOTKEYS + FIXES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -90,12 +90,14 @@ _G.Dropdowns = {}
 local Features = {
     Fly = {state = false, speed = 60, key = Enum.KeyCode.F1, mode = "Toggle"},
     NoClip = {state = false, key = Enum.KeyCode.F2, mode = "Toggle"},
-    Aimbot = {state = false, fov = 120, smooth = 0.5, key = Enum.KeyCode.F3, mode = "Toggle"},
+    Aimbot = {state = false, fov = 120, smooth = 0.5, maxDist = 300, key = Enum.KeyCode.F3, mode = "Toggle"},
     SilentAim = {state = false, key = Enum.KeyCode.F4, mode = "Toggle"},
     Spinbot = {state = false, speed = 25, key = Enum.KeyCode.F5, mode = "Toggle"},
     MagicBullet = {state = false, key = Enum.KeyCode.F6, mode = "Toggle"},
     ESP = {state = false, box = false, name = false, skeleton = false, tracer = false, color = Color3.fromRGB(0,200,255), key = Enum.KeyCode.F7, mode = "Toggle"},
-    DrawFOV = {state = false, key = Enum.KeyCode.F8, mode = "Toggle"}
+    DrawFOV = {state = false, key = Enum.KeyCode.F8, mode = "Toggle"},
+    TeamCheck = {state = false, key = Enum.KeyCode.F9, mode = "Toggle"},
+    AntiAFK = {state = false}
 }
 
 local Connections = {}
@@ -229,22 +231,23 @@ function StartAimbot()
         local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
         local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not myPos then return end
+        local myTeam = LocalPlayer.Team
         for _, p in ipairs(Players:GetPlayers()) do
             if p == LocalPlayer or not p.Character then continue end
+            if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
             local head = p.Character:FindFirstChild("Head")
             if not head then continue end
             local pos, on = Camera:WorldToViewportPoint(head.Position)
-            if on then
-                local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                if d < dist then
-                    local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * 200)
-                    local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                    if not hit or hit:IsDescendantOf(p.Character) then
-                        dist = d
-                        closest = p
-                    end
-                end
-            end
+            if not on then continue end
+            local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+            if d > dist then continue end
+            local distance = (myPos.Position - head.Position).Magnitude
+            if distance > Features.Aimbot.maxDist then continue end
+            local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * distance)
+            local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
+            if hit and not hit:IsDescendantOf(p.Character) then continue end
+            dist = d
+            closest = p
         end
         if closest and closest.Character then
             local head = closest.Character.Head
@@ -275,7 +278,8 @@ function StartSpinbot()
         if char then
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(SpinAngle), 0)
+                local oldCF = hrp.CFrame
+                hrp.CFrame = CFrame.new(oldCF.Position) * CFrame.Angles(0, math.rad(SpinAngle), 0)
                 if SpinRemote then
                     pcall(function()
                         SpinRemote:FireServer(hrp.CFrame)
@@ -308,15 +312,16 @@ function StartMagicBullet()
                         if not cache[child] or cache[child] < now - 0.3 then
                             cache[child] = now
                             local closest, dist = nil, 400
+                            local myTeam = LocalPlayer.Team
                             for _, p in ipairs(Players:GetPlayers()) do
-                                if p ~= LocalPlayer and p.Character then
-                                    local head = p.Character:FindFirstChild("Head")
-                                    if head then
-                                        local d = (head.Position - child.Position).Magnitude
-                                        if d < dist then
-                                            dist = d
-                                            closest = p
-                                        end
+                                if p == LocalPlayer or not p.Character then continue end
+                                if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
+                                local head = p.Character:FindFirstChild("Head")
+                                if head then
+                                    local d = (head.Position - child.Position).Magnitude
+                                    if d < dist then
+                                        dist = d
+                                        closest = p
                                     end
                                 end
                             end
@@ -490,7 +495,7 @@ function DrawFOVCircle()
     FOVCircle.Color = Color3.fromRGB(255, 255, 255)
     FOVCircle.Filled = false
     FOVCircle.NumSides = 64
-    FOVCircle.Radius = Features.Aimbot.fov * 3.5
+    FOVCircle.Radius = Features.Aimbot.fov * 2.5
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     FOVCircle.Visible = true
     Connections.FOVCircle = RunService.RenderStepped:Connect(function()
@@ -500,7 +505,7 @@ function DrawFOVCircle()
         end
         if FOVCircle then
             FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-            FOVCircle.Radius = Features.Aimbot.fov * 3.5
+            FOVCircle.Radius = Features.Aimbot.fov * 2.5
             FOVCircle.Visible = true
         end
     end)
@@ -544,7 +549,7 @@ local function BuildCategory(cat)
         return f
     end
 
-    local function Toggle(text, callback)
+    local function Toggle(text, stateRef, callback)
         local f = Instance.new("Frame", Scroll)
         f.Size = UDim2.new(1, -10, 0, 44)
         f.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
@@ -560,24 +565,22 @@ local function BuildCategory(cat)
         l.TextSize = 13
         l.TextXAlignment = Enum.TextXAlignment.Left
         local btn = Instance.new("TextButton", f)
-        btn.Size = UDim2.new(0, 60, 0, 28)
-        btn.Position = UDim2.new(1, -74, 0.5, -14)
-        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-        btn.Text = "OFF"
+        btn.Size = UDim2.new(0.2, 0, 0, 28)
+        btn.Position = UDim2.new(0.75, 0, 0.5, -14)
+        btn.BackgroundColor3 = stateRef and Color3.fromRGB(0, 200, 255) or Color3.fromRGB(45, 45, 60)
+        btn.Text = stateRef and "ON" or "OFF"
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         btn.Font = Enum.Font.GothamBold
         btn.TextSize = 11
         btn.AutoButtonColor = false
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-        local state = false
-        local function set(v)
-            state = v
-            btn.BackgroundColor3 = v and Color3.fromRGB(0, 200, 255) or Color3.fromRGB(45, 45, 60)
-            btn.Text = v and "ON" or "OFF"
-            pcall(callback, v)
-        end
-        btn.MouseButton1Click:Connect(function() set(not state) end)
-        return set
+        btn.MouseButton1Click:Connect(function()
+            stateRef = not stateRef
+            btn.BackgroundColor3 = stateRef and Color3.fromRGB(0, 200, 255) or Color3.fromRGB(45, 45, 60)
+            btn.Text = stateRef and "ON" or "OFF"
+            pcall(callback, stateRef)
+        end)
+        return f
     end
 
     local function Slider(text, min, max, default, callback)
@@ -607,21 +610,24 @@ local function BuildCategory(cat)
         fill.BorderSizePixel = 0
         Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 6)
         local dragging = false
-        local function update(input)
-            local pos = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
-            local val = math.floor(min + (pos * (max - min)))
-            fill.Size = UDim2.new(pos, 0, 1, 0)
-            l.Text = text .. ": " .. tostring(val)
-            pcall(callback, val)
-        end
         bg.InputBegan:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = true
-                update(i)
+                local pos = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+                local val = math.floor(min + (pos * (max - min)))
+                fill.Size = UDim2.new(pos, 0, 1, 0)
+                l.Text = text .. ": " .. tostring(val)
+                pcall(callback, val)
             end
         end)
         UserInputService.InputChanged:Connect(function(i)
-            if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then update(i) end
+            if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+                local pos = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+                local val = math.floor(min + (pos * (max - min)))
+                fill.Size = UDim2.new(pos, 0, 1, 0)
+                l.Text = text .. ": " .. tostring(val)
+                pcall(callback, val)
+            end
         end)
         UserInputService.InputEnded:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
@@ -646,39 +652,176 @@ local function BuildCategory(cat)
         return b
     end
 
-    local function Dropdown(text, callback)
+    local function KeybindRow(featureName, labelText)
         local f = Instance.new("Frame", Scroll)
         f.Size = UDim2.new(1, -10, 0, 44)
         f.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
         f.BorderSizePixel = 0
-        f.ClipsDescendants = true
         Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
         local l = Instance.new("TextLabel", f)
-        l.Size = UDim2.new(0.3, 0, 1, 0)
+        l.Size = UDim2.new(0.35, 0, 1, 0)
         l.Position = UDim2.new(0, 14, 0, 0)
         l.BackgroundTransparency = 1
-        l.Text = text
+        l.Text = labelText
         l.TextColor3 = Color3.fromRGB(220, 220, 230)
         l.Font = Enum.Font.Gotham
         l.TextSize = 13
         l.TextXAlignment = Enum.TextXAlignment.Left
-        local btn = Instance.new("TextButton", f)
-        btn.Size = UDim2.new(0.5, -10, 0, 30)
-        btn.Position = UDim2.new(0.45, 0, 0.5, -15)
-        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-        btn.Text = "Select..."
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 12
-        btn.AutoButtonColor = false
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+        local keyBtn = Instance.new("TextButton", f)
+        keyBtn.Size = UDim2.new(0.25, 0, 0, 30)
+        keyBtn.Position = UDim2.new(0.38, 0, 0.5, -15)
+        keyBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+        local keyName = tostring(Features[featureName].key):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
+        keyBtn.Text = keyName
+        keyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        keyBtn.Font = Enum.Font.Gotham
+        keyBtn.TextSize = 12
+        keyBtn.AutoButtonColor = false
+        Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 8)
+        local modeBtn = Instance.new("TextButton", f)
+        modeBtn.Size = UDim2.new(0.2, 0, 0, 30)
+        modeBtn.Position = UDim2.new(0.67, 0, 0.5, -15)
+        modeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+        modeBtn.Text = Features[featureName].mode
+        modeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        modeBtn.Font = Enum.Font.Gotham
+        modeBtn.TextSize = 12
+        modeBtn.AutoButtonColor = false
+        Instance.new("UICorner", modeBtn).CornerRadius = UDim.new(0, 8)
+        keyBtn.MouseButton1Click:Connect(function()
+            keyBtn.Text = "..."
+            keyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+            local conn
+            conn = UserInputService.InputBegan:Connect(function(input, gp)
+                if gp then return end
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    Features[featureName].key = input.KeyCode
+                    keyBtn.Text = tostring(input.KeyCode):gsub("Enum.KeyCode.", "")
+                    keyBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+                    conn:Disconnect()
+                elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.MouseButton3 or input.UserInputType == Enum.UserInputType.MouseButton4 or input.UserInputType == Enum.UserInputType.MouseButton5 then
+                    Features[featureName].key = input.UserInputType
+                    keyBtn.Text = tostring(input.UserInputType):gsub("Enum.UserInputType.", "")
+                    keyBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+                    conn:Disconnect()
+                end
+            end)
+        end)
+        modeBtn.MouseButton1Click:Connect(function()
+            if Features[featureName].mode == "Toggle" then
+                Features[featureName].mode = "Hold"
+                modeBtn.Text = "Hold"
+            else
+                Features[featureName].mode = "Toggle"
+                modeBtn.Text = "Toggle"
+            end
+        end)
+        return f
+    end
+
+    if cat == "MOVEMENT" then
+        Section("FLIGHT")
+        Toggle("Fly", Features.Fly.state, function(v) Features.Fly.state = v; if v then StartFly() else StopFly() end end)
+        Slider("Fly Speed", 10, 400, Features.Fly.speed, function(v) Features.Fly.speed = v end)
+        Section("NOCLIP")
+        Toggle("NoClip", Features.NoClip.state, function(v) Features.NoClip.state = v; if v then StartNoClip() else StopNoClip() end end)
+        Section("WALK")
+        local walkSpeed = 16
+        Slider("Walk Speed", 16, 500, walkSpeed, function(v) walkSpeed = v; if LocalPlayer.Character then local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = v end end end)
+    elseif cat == "AIMBOT" then
+        Section("AIMBOT")
+        Toggle("Aimbot", Features.Aimbot.state, function(v) Features.Aimbot.state = v; if v then StartAimbot() else StopAimbot() end end)
+        Toggle("Silent Aim", Features.SilentAim.state, function(v) Features.SilentAim.state = v end)
+        Toggle("Team Check", Features.TeamCheck.state, function(v) Features.TeamCheck.state = v end)
+        Slider("Aimbot FOV", 30, 300, Features.Aimbot.fov, function(v) Features.Aimbot.fov = v end)
+        Slider("Aimbot Smooth", 1, 100, Features.Aimbot.smooth * 100, function(v) Features.Aimbot.smooth = v / 100 end)
+        Slider("Max Distance", 100, 500, Features.Aimbot.maxDist, function(v) Features.Aimbot.maxDist = v end)
+        Section("SPINBOT")
+        Toggle("Spinbot", Features.Spinbot.state, function(v) Features.Spinbot.state = v; if v then StartSpinbot() else StopSpinbot() end end)
+        Slider("Spin Speed", 1, 50, Features.Spinbot.speed, function(v) Features.Spinbot.speed = v end)
+        Section("MAGIC BULLET")
+        Toggle("Magic Bullet", Features.MagicBullet.state, function(v) Features.MagicBullet.state = v; if v then StartMagicBullet() else StopMagicBullet() end end)
+        Section("DRAW FOV")
+        Toggle("Draw FOV", Features.DrawFOV.state, function(v) Features.DrawFOV.state = v; if v then DrawFOVCircle() else if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end end end)
+    elseif cat == "ESP" then
+        Section("ESP")
+        Toggle("ESP", Features.ESP.state, function(v) Features.ESP.state = v; if v then StartESP() else StopESP() end end)
+        Toggle("Box", Features.ESP.box, function(v) Features.ESP.box = v end)
+        Toggle("Name", Features.ESP.name, function(v) Features.ESP.name = v end)
+        Toggle("Skeleton", Features.ESP.skeleton, function(v) Features.ESP.skeleton = v end)
+        Toggle("Tracer", Features.ESP.tracer, function(v) Features.ESP.tracer = v end)
+        local espColor = Instance.new("Frame", Scroll)
+        espColor.Size = UDim2.new(1, -10, 0, 44)
+        espColor.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
+        espColor.BorderSizePixel = 0
+        Instance.new("UICorner", espColor).CornerRadius = UDim.new(0, 10)
+        local l10 = Instance.new("TextLabel", espColor)
+        l10.Size = UDim2.new(0.5, 0, 1, 0)
+        l10.Position = UDim2.new(0, 14, 0, 0)
+        l10.BackgroundTransparency = 1
+        l10.Text = "Color"
+        l10.TextColor3 = Color3.fromRGB(220, 220, 230)
+        l10.Font = Enum.Font.Gotham
+        l10.TextSize = 13
+        l10.TextXAlignment = Enum.TextXAlignment.Left
+        local colorBtn = Instance.new("TextButton", espColor)
+        colorBtn.Size = UDim2.new(0.2, 0, 0, 28)
+        colorBtn.Position = UDim2.new(0.75, 0, 0.5, -14)
+        colorBtn.BackgroundColor3 = Features.ESP.color
+        colorBtn.Text = ""
+        colorBtn.AutoButtonColor = false
+        Instance.new("UICorner", colorBtn).CornerRadius = UDim.new(0, 8)
+        local colors = {Color3.fromRGB(0,200,255), Color3.fromRGB(255,50,80), Color3.fromRGB(0,255,0), Color3.fromRGB(255,255,0), Color3.fromRGB(255,0,255), Color3.fromRGB(255,255,255)}
+        local idx = 1
+        colorBtn.MouseButton1Click:Connect(function()
+            idx = idx % #colors + 1
+            colorBtn.BackgroundColor3 = colors[idx]
+            Features.ESP.color = colors[idx]
+        end)
+    elseif cat == "HOTKEYS" then
+        Section("HOTKEYS")
+        KeybindRow("Fly", "Fly")
+        KeybindRow("NoClip", "NoClip")
+        KeybindRow("Aimbot", "Aimbot")
+        KeybindRow("SilentAim", "Silent Aim")
+        KeybindRow("Spinbot", "Spinbot")
+        KeybindRow("MagicBullet", "Magic Bullet")
+        KeybindRow("ESP", "ESP")
+        KeybindRow("DrawFOV", "Draw FOV")
+        KeybindRow("TeamCheck", "Team Check")
+    elseif cat == "UTILITY" then
+        Section("TELEPORT")
+        local targetDD = Instance.new("Frame", Scroll)
+        targetDD.Size = UDim2.new(1, -10, 0, 44)
+        targetDD.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
+        targetDD.BorderSizePixel = 0
+        Instance.new("UICorner", targetDD).CornerRadius = UDim.new(0, 10)
+        local l11 = Instance.new("TextLabel", targetDD)
+        l11.Size = UDim2.new(0.3, 0, 1, 0)
+        l11.Position = UDim2.new(0, 14, 0, 0)
+        l11.BackgroundTransparency = 1
+        l11.Text = "Target"
+        l11.TextColor3 = Color3.fromRGB(220, 220, 230)
+        l11.Font = Enum.Font.Gotham
+        l11.TextSize = 13
+        l11.TextXAlignment = Enum.TextXAlignment.Left
+        local ddBtn = Instance.new("TextButton", targetDD)
+        ddBtn.Size = UDim2.new(0.5, -10, 0, 30)
+        ddBtn.Position = UDim2.new(0.45, 0, 0.5, -15)
+        ddBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+        ddBtn.Text = "Select..."
+        ddBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ddBtn.Font = Enum.Font.Gotham
+        ddBtn.TextSize = 12
+        ddBtn.AutoButtonColor = false
+        Instance.new("UICorner", ddBtn).CornerRadius = UDim.new(0, 8)
         local open = false
         local options = {}
         local function UpdateList(newOptions)
             for _, v in ipairs(options) do v:Destroy() end
             options = {}
             for i, opt in ipairs(newOptions) do
-                local ob = Instance.new("TextButton", f)
+                local ob = Instance.new("TextButton", targetDD)
                 ob.Size = UDim2.new(0.5, -10, 0, 28)
                 ob.Position = UDim2.new(0.45, 0, 0, 6 + (i * 32))
                 ob.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
@@ -690,186 +833,31 @@ local function BuildCategory(cat)
                 ob.AutoButtonColor = false
                 Instance.new("UICorner", ob).CornerRadius = UDim.new(0, 8)
                 ob.MouseButton1Click:Connect(function()
-                    btn.Text = opt
+                    ddBtn.Text = opt
                     open = false
-                    f.Size = UDim2.new(1, -10, 0, 44)
+                    targetDD.Size = UDim2.new(1, -10, 0, 44)
                     for _, b in ipairs(options) do b.Visible = false end
-                    pcall(callback, opt)
+                    States.TargetPlayer = opt
                 end)
                 table.insert(options, ob)
             end
         end
-        btn.MouseButton1Click:Connect(function()
+        ddBtn.MouseButton1Click:Connect(function()
             open = not open
             if open then
-                f.Size = UDim2.new(1, -10, 0, 44 + (#options * 32))
+                targetDD.Size = UDim2.new(1, -10, 0, 44 + (#options * 32))
                 for _, b in ipairs(options) do b.Visible = true end
             else
-                f.Size = UDim2.new(1, -10, 0, 44)
+                targetDD.Size = UDim2.new(1, -10, 0, 44)
                 for _, b in ipairs(options) do b.Visible = false end
             end
         end)
-        return UpdateList
-    end
-
-    local function ColorPicker(text, callback)
-        local f = Instance.new("Frame", Scroll)
-        f.Size = UDim2.new(1, -10, 0, 44)
-        f.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        f.BorderSizePixel = 0
-        Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
-        local l = Instance.new("TextLabel", f)
-        l.Size = UDim2.new(0.5, 0, 1, 0)
-        l.Position = UDim2.new(0, 14, 0, 0)
-        l.BackgroundTransparency = 1
-        l.Text = text
-        l.TextColor3 = Color3.fromRGB(220, 220, 230)
-        l.Font = Enum.Font.Gotham
-        l.TextSize = 13
-        l.TextXAlignment = Enum.TextXAlignment.Left
-        local btn = Instance.new("TextButton", f)
-        btn.Size = UDim2.new(0, 70, 0, 28)
-        btn.Position = UDim2.new(1, -84, 0.5, -14)
-        btn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-        btn.Text = ""
-        btn.AutoButtonColor = false
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-        local colors = {Color3.fromRGB(0,200,255), Color3.fromRGB(255,50,80), Color3.fromRGB(0,255,0), Color3.fromRGB(255,255,0), Color3.fromRGB(255,0,255), Color3.fromRGB(255,255,255)}
-        local idx = 1
-        btn.BackgroundColor3 = colors[idx]
-        btn.MouseButton1Click:Connect(function()
-            idx = idx % #colors + 1
-            btn.BackgroundColor3 = colors[idx]
-            pcall(callback, colors[idx])
-        end)
-        return f
-    end
-
-    if cat == "MOVEMENT" then
-        Section("FLIGHT")
-        local flyToggle = Toggle("Fly", function(v) Features.Fly.state = v; if v then StartFly() else StopFly() end end)
-        Slider("Fly Speed", 10, 400, Features.Fly.speed, function(v) Features.Fly.speed = v end)
-        Section("NOCLIP")
-        Toggle("NoClip", function(v) Features.NoClip.state = v; if v then StartNoClip() else StopNoClip() end end)
-        Section("WALK")
-        Slider("Walk Speed", 16, 500, 16, function(v) if LocalPlayer.Character then local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = v end end end)
-    elseif cat == "AIMBOT" then
-        Section("AIMBOT")
-        Toggle("Aimbot", function(v) Features.Aimbot.state = v; if v then StartAimbot() else StopAimbot() end end)
-        Toggle("Silent Aim", function(v) Features.SilentAim.state = v end)
-        Slider("Aimbot FOV", 30, 300, Features.Aimbot.fov, function(v) Features.Aimbot.fov = v end)
-        Slider("Aimbot Smooth", 1, 100, Features.Aimbot.smooth * 100, function(v) Features.Aimbot.smooth = v / 100 end)
-        Section("SPINBOT")
-        Toggle("Spinbot", function(v) Features.Spinbot.state = v; if v then StartSpinbot() else StopSpinbot() end end)
-        Slider("Spin Speed", 1, 50, Features.Spinbot.speed, function(v) Features.Spinbot.speed = v end)
-        Section("MAGIC BULLET")
-        Toggle("Magic Bullet", function(v) Features.MagicBullet.state = v; if v then StartMagicBullet() else StopMagicBullet() end end)
-        Section("DRAW FOV")
-        Toggle("Draw FOV", function(v) Features.DrawFOV.state = v; if v then DrawFOVCircle() else if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end end end)
-    elseif cat == "ESP" then
-        Section("ESP")
-        Toggle("ESP", function(v) Features.ESP.state = v; if v then StartESP() else StopESP() end end)
-        local espBox = Toggle("Box ESP", function(v) Features.ESP.box = v end)
-        local espName = Toggle("Name ESP", function(v) Features.ESP.name = v end)
-        local espSkel = Toggle("Skeleton ESP", function(v) Features.ESP.skeleton = v end)
-        local espTracer = Toggle("Tracer ESP", function(v) Features.ESP.tracer = v end)
-        ColorPicker("ESP Color", function(c) Features.ESP.color = c end)
-    elseif cat == "HOTKEYS" then
-        Section("HOTKEY AYARLARI")
-        local function HotkeyRow(featureName, labelText)
-            local f = Instance.new("Frame", Scroll)
-            f.Size = UDim2.new(1, -10, 0, 44)
-            f.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-            f.BorderSizePixel = 0
-            Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
-            local l = Instance.new("TextLabel", f)
-            l.Size = UDim2.new(0.3, 0, 1, 0)
-            l.Position = UDim2.new(0, 14, 0, 0)
-            l.BackgroundTransparency = 1
-            l.Text = labelText
-            l.TextColor3 = Color3.fromRGB(220, 220, 230)
-            l.Font = Enum.Font.Gotham
-            l.TextSize = 13
-            l.TextXAlignment = Enum.TextXAlignment.Left
-            local keyBtn = Instance.new("TextButton", f)
-            keyBtn.Size = UDim2.new(0.25, 0, 0, 30)
-            keyBtn.Position = UDim2.new(0.38, 0, 0.5, -15)
-            keyBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-            local keyName = tostring(Features[featureName].key):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
-            keyBtn.Text = keyName
-            keyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            keyBtn.Font = Enum.Font.Gotham
-            keyBtn.TextSize = 12
-            keyBtn.AutoButtonColor = false
-            Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 8)
-            local modeBtn = Instance.new("TextButton", f)
-            modeBtn.Size = UDim2.new(0.2, 0, 0, 30)
-            modeBtn.Position = UDim2.new(0.7, 0, 0.5, -15)
-            modeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-            modeBtn.Text = Features[featureName].mode
-            modeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            modeBtn.Font = Enum.Font.Gotham
-            modeBtn.TextSize = 12
-            modeBtn.AutoButtonColor = false
-            Instance.new("UICorner", modeBtn).CornerRadius = UDim.new(0, 8)
-            keyBtn.MouseButton1Click:Connect(function()
-                keyBtn.Text = "..."
-                keyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-                local conn
-                conn = UserInputService.InputBegan:Connect(function(input, gp)
-                    if gp then return end
-                    if input.UserInputType == Enum.UserInputType.Keyboard then
-                        Features[featureName].key = input.KeyCode
-                        keyBtn.Text = tostring(input.KeyCode):gsub("Enum.KeyCode.", "")
-                        keyBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-                        conn:Disconnect()
-                    elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.MouseButton3 or input.UserInputType == Enum.UserInputType.MouseButton4 or input.UserInputType == Enum.UserInputType.MouseButton5 then
-                        Features[featureName].key = input.UserInputType
-                        keyBtn.Text = tostring(input.UserInputType):gsub("Enum.UserInputType.", "")
-                        keyBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-                        conn:Disconnect()
-                    end
-                end)
-            end)
-            modeBtn.MouseButton1Click:Connect(function()
-                if Features[featureName].mode == "Toggle" then
-                    Features[featureName].mode = "Hold"
-                    modeBtn.Text = "Hold"
-                else
-                    Features[featureName].mode = "Toggle"
-                    modeBtn.Text = "Toggle"
-                end
-            end)
-            return f
-        end
-        HotkeyRow("Fly", "Fly")
-        HotkeyRow("NoClip", "NoClip")
-        HotkeyRow("Aimbot", "Aimbot")
-        HotkeyRow("SilentAim", "Silent Aim")
-        HotkeyRow("Spinbot", "Spinbot")
-        HotkeyRow("MagicBullet", "Magic Bullet")
-        HotkeyRow("ESP", "ESP")
-        HotkeyRow("DrawFOV", "Draw FOV")
-        Section("BİLGİ")
-        local info = Instance.new("TextLabel", Scroll)
-        info.Size = UDim2.new(1, -10, 0, 80)
-        info.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        info.Text = "Tuş atamak için ilgili butona tıkla ve istediğin tuşa bas.\nMouse yan tuşları (4,5) dahil.\nMod: Toggle = bas-kapa, Hold = basılı tut"
-        info.TextColor3 = Color3.fromRGB(200, 200, 210)
-        info.Font = Enum.Font.Gotham
-        info.TextSize = 13
-        info.TextXAlignment = Enum.TextXAlignment.Left
-        info.TextYAlignment = Enum.TextYAlignment.Top
-        info.TextWrapped = true
-        Instance.new("UICorner", info).CornerRadius = UDim.new(0, 10)
-    elseif cat == "UTILITY" then
-        Section("TELEPORT")
-        local targetDD = Dropdown("Target Player", function(sel) States.TargetPlayer = sel end)
-        _G.Dropdowns[#_G.Dropdowns+1] = targetDD
-        targetDD(GetPlayerNames())
+        _G.Dropdowns[#_G.Dropdowns+1] = UpdateList
+        UpdateList(GetPlayerNames())
+        local States = {TargetPlayer = nil}
         Button("Teleport to Target", function()
-            if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
-                local p = GetPlayerByName(States.TargetPlayer)
+            if ddBtn.Text and ddBtn.Text ~= "Select..." then
+                local p = GetPlayerByName(ddBtn.Text)
                 if p and p.Character then
                     local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     local tHRP = p.Character:FindFirstChild("HumanoidRootPart")
@@ -878,8 +866,8 @@ local function BuildCategory(cat)
             end
         end)
         Button("Bring Target", function()
-            if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
-                local p = GetPlayerByName(States.TargetPlayer)
+            if ddBtn.Text and ddBtn.Text ~= "Select..." then
+                local p = GetPlayerByName(ddBtn.Text)
                 if p and p.Character then
                     local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     local tHRP = p.Character:FindFirstChild("HumanoidRootPart")
@@ -890,7 +878,8 @@ local function BuildCategory(cat)
         Section("FOV")
         Slider("FOV Changer", 30, 120, 70, function(v) Camera.FieldOfView = v end)
         Section("UTILITY")
-        Toggle("Anti AFK", function(v)
+        Toggle("Anti AFK", Features.AntiAFK.state, function(v)
+            Features.AntiAFK.state = v
             if v then
                 Connections.AFK = VirtualUser.Button2Down:Connect(function()
                     VirtualUser.Button2Up(Vector2.new(0,0), Camera.CFrame)
@@ -900,8 +889,8 @@ local function BuildCategory(cat)
             end
         end)
         Button("Kill Target", function()
-            if States.TargetPlayer and States.TargetPlayer ~= "No Players" then
-                local p = GetPlayerByName(States.TargetPlayer)
+            if ddBtn.Text and ddBtn.Text ~= "Select..." then
+                local p = GetPlayerByName(ddBtn.Text)
                 if p and p.Character then
                     local hum = p.Character:FindFirstChildOfClass("Humanoid")
                     if hum then
@@ -925,9 +914,9 @@ local function BuildCategory(cat)
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[HOTKEYS]
-Tüm tuş atamaları HOTKEYS kategorisinde ayarlanır.
-Her özellik için ayrı tuş + Toggle/Hold modu.
+[HOTKEYS KATEGORİSİ]
+Tüm tuş atamaları ve Hold/Toggle modları
+"HOTKEYS" bölümünden ayarlanabilir.
 
 [MOVEMENT]
 Fly       → W/A/S/D move, Space up, Shift down
@@ -935,15 +924,15 @@ NoClip    → Walk through walls
 Walk Speed→ Adjust running speed
 
 [AIMBOT]
-Aimbot    → Auto-aim with wall check (GELİŞTİRİLDİ)
-Silent Aim→ Bullets go to head without camera shake (GELİŞTİRİLDİ)
-FOV       → Aim field of view
+Aimbot    → Auto-aim with wall check, Team Check, Max Distance
+Silent Aim→ Bullets go to head without camera shake
+FOV       → Aim field of view (drawable)
 Smooth    → Aim smoothness
 Magic Bullet→ Projectiles homing to target
 
 [SPINBOT]
-Spinbot   → Character spins (Server-side via RemoteEvent)
-Spin Speed→ Rotation speed
+Spinbot   → Character spins (SERVER-SIDE via RemoteEvent)
+Spin Speed→ Rotation speed (doesn't affect fly)
 
 [ESP]
 Box, Name, Skeleton, Tracer, Color
@@ -963,7 +952,7 @@ Anti AFK, Kill Target
 ═══════════════════════════════════════
 ]]
         local g = Instance.new("TextLabel", Scroll)
-        g.Size = UDim2.new(1, -10, 0, 500)
+        g.Size = UDim2.new(1, -10, 0, 550)
         g.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
         g.Text = guideText
         g.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -1030,6 +1019,9 @@ local function ToggleFeature(name)
     elseif name == "DrawFOV" then
         feature.state = not feature.state
         if feature.state then DrawFOVCircle() else if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end end
+    elseif name == "TeamCheck" then
+        feature.state = not feature.state
+        print("[TEAM CHECK] " .. tostring(feature.state))
     end
 end
 
@@ -1061,6 +1053,9 @@ local function SetFeatureState(name, state)
     elseif name == "DrawFOV" then
         feature.state = state
         if state then DrawFOVCircle() else if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end end
+    elseif name == "TeamCheck" then
+        feature.state = state
+        print("[TEAM CHECK] " .. tostring(state))
     end
 end
 
@@ -1111,6 +1106,8 @@ local function ResetAll()
             elseif name == "DrawFOV" then
                 if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end
                 if Connections.FOVCircle then Connections.FOVCircle:Disconnect(); Connections.FOVCircle = nil end
+            elseif name == "AntiAFK" then
+                if Connections.AFK then Connections.AFK:Disconnect(); Connections.AFK = nil end
             end
         end
     end
@@ -1122,7 +1119,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v11 | INSERT | END | HOTKEYS Kategorisinden Ayarla"
+splash.Text = "VISITING v11 | INSERT | END | HOTKEYS Kategorisi Eklendi"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1133,5 +1130,6 @@ task.delay(5, function() splash:Destroy() end)
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
 print("=== VISITING v11 YÜKLENDİ ===")
-print("HOTKEYS kategorisinden tuş atamalarını ayarla.")
-print("Aimbot ve Silent Aim geliştirildi.")
+print("Team Check, Max Distance, FOV düzeltildi.")
+print("Spinbot fly'ı bozmaz (sadece Y ekseninde döner).")
+print("HOTKEYS kategorisi eklendi - tüm tuş atamaları orada.")
