@@ -1,16 +1,17 @@
--- VISITING v11 - COMPLETE + HOTKEYS + FIXES
+-- VISITING v12 - FINAL + CONFIG
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V11"
+ScreenGui.Name = "VS_V12"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
@@ -55,7 +56,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v11"
+Txt.Text = "VISITING v12"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -105,6 +106,8 @@ local ESPObjects = {}
 local SpinAngle = 0
 local FOVCircle = nil
 local Holding = {}
+local WalkSpeed = 16
+local FOVValue = 70
 
 local function GetPlayerNames()
     local names = {}
@@ -177,7 +180,9 @@ function StartFly()
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0, 1, 0) end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir -= Vector3.new(0, 1, 0) end
         bv.Velocity = dir.Magnitude > 0 and dir.Unit * Features.Fly.speed or Vector3.new()
-        bg.CFrame = camCF
+        if not Features.Spinbot.state then
+            bg.CFrame = camCF
+        end
     end)
     print("[FLY] Aktif")
 end
@@ -304,6 +309,7 @@ function StartMagicBullet()
         local char = LocalPlayer.Character
         if not char then return end
         local now = tick()
+        local myTeam = LocalPlayer.Team
         for _, obj in ipairs(Workspace:GetChildren()) do
             for _, child in ipairs(obj:GetDescendants()) do
                 if child:IsA("BasePart") and child.Velocity.Magnitude > 20 then
@@ -312,7 +318,6 @@ function StartMagicBullet()
                         if not cache[child] or cache[child] < now - 0.3 then
                             cache[child] = now
                             local closest, dist = nil, 400
-                            local myTeam = LocalPlayer.Team
                             for _, p in ipairs(Players:GetPlayers()) do
                                 if p == LocalPlayer or not p.Character then continue end
                                 if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
@@ -726,8 +731,7 @@ local function BuildCategory(cat)
         Section("NOCLIP")
         Toggle("NoClip", Features.NoClip.state, function(v) Features.NoClip.state = v; if v then StartNoClip() else StopNoClip() end end)
         Section("WALK")
-        local walkSpeed = 16
-        Slider("Walk Speed", 16, 500, walkSpeed, function(v) walkSpeed = v; if LocalPlayer.Character then local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = v end end end)
+        Slider("Walk Speed", 16, 500, WalkSpeed, function(v) WalkSpeed = v; if LocalPlayer.Character then local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = v end end end)
     elseif cat == "AIMBOT" then
         Section("AIMBOT")
         Toggle("Aimbot", Features.Aimbot.state, function(v) Features.Aimbot.state = v; if v then StartAimbot() else StopAimbot() end end)
@@ -789,6 +793,58 @@ local function BuildCategory(cat)
         KeybindRow("ESP", "ESP")
         KeybindRow("DrawFOV", "Draw FOV")
         KeybindRow("TeamCheck", "Team Check")
+    elseif cat == "CONFIG" then
+        Section("CONFIG")
+        Button("Save Config", function()
+            local success, err = pcall(function()
+                local config = {
+                    Features = Features,
+                    WalkSpeed = WalkSpeed,
+                    FOV = FOVValue
+                }
+                local json = HttpService:JSONEncode(config)
+                if writefile then
+                    writefile("vs_config.json", json)
+                    print("[CONFIG] Kaydedildi!")
+                else
+                    print("[CONFIG] writefile desteklenmiyor.")
+                end
+            end)
+            if not success then print("[CONFIG] Kaydetme hatası: " .. tostring(err)) end
+        end)
+        Button("Load Config", function()
+            local success, err = pcall(function()
+                if readfile then
+                    local data = readfile("vs_config.json")
+                    if data and data ~= "" then
+                        local config = HttpService:JSONDecode(data)
+                        if config.Features then
+                            for name, f in pairs(config.Features) do
+                                if Features[name] then
+                                    for k, v in pairs(f) do
+                                        if k == "key" and type(v) == "string" then
+                                            local enum = Enum.KeyCode[v] or Enum.UserInputType[v]
+                                            if enum then Features[name][k] = enum end
+                                        elseif k == "color" and type(v) == "table" then
+                                            Features[name][k] = Color3.fromRGB(v.R*255, v.G*255, v.B*255)
+                                        else
+                                            Features[name][k] = v
+                                        end
+                                    end
+                                end
+                            end
+                            if config.WalkSpeed then WalkSpeed = config.WalkSpeed end
+                            if config.FOV then FOVValue = config.FOV; Camera.FieldOfView = FOVValue end
+                            print("[CONFIG] Yüklendi!")
+                            UpdateAllDropdowns()
+                        end
+                    end
+                else
+                    print("[CONFIG] readfile desteklenmiyor.")
+                end
+            end)
+            if not success then print("[CONFIG] Yükleme hatası: " .. tostring(err)) end
+        end)
     elseif cat == "UTILITY" then
         Section("TELEPORT")
         local targetDD = Instance.new("Frame", Scroll)
@@ -876,7 +932,7 @@ local function BuildCategory(cat)
             end
         end)
         Section("FOV")
-        Slider("FOV Changer", 30, 120, 70, function(v) Camera.FieldOfView = v end)
+        Slider("FOV Changer", 30, 120, FOVValue, function(v) FOVValue = v; Camera.FieldOfView = v end)
         Section("UTILITY")
         Toggle("Anti AFK", Features.AntiAFK.state, function(v)
             Features.AntiAFK.state = v
@@ -907,7 +963,7 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v11 GUIDE
+          VISITING v12 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
@@ -917,6 +973,10 @@ END     → Emergency Stop (All Off)
 [HOTKEYS KATEGORİSİ]
 Tüm tuş atamaları ve Hold/Toggle modları
 "HOTKEYS" bölümünden ayarlanabilir.
+
+[CONFIG KATEGORİSİ]
+Save Config → Tüm ayarları kaydeder
+Load Config → Kaydedilmiş ayarları yükler
 
 [MOVEMENT]
 Fly       → W/A/S/D move, Space up, Shift down
@@ -931,8 +991,8 @@ Smooth    → Aim smoothness
 Magic Bullet→ Projectiles homing to target
 
 [SPINBOT]
-Spinbot   → Character spins (SERVER-SIDE via RemoteEvent)
-Spin Speed→ Rotation speed (doesn't affect fly)
+Spinbot   → Character spins (does not affect fly)
+Spin Speed→ Rotation speed
 
 [ESP]
 Box, Name, Skeleton, Tracer, Color
@@ -967,7 +1027,7 @@ Anti AFK, Kill Target
     Scroll.CanvasSize = UDim2.new(0, 0, 0, #Scroll:GetChildren() * 52 + 100)
 end
 
-local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "UTILITY", "GUIDE"}
+local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
 local CatButtons = {}
 
 for i, cat in ipairs(Categories) do
@@ -1119,7 +1179,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v11 | INSERT | END | HOTKEYS Kategorisi Eklendi"
+splash.Text = "VISITING v12 | INSERT | END | CONFIG Eklendi"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1129,7 +1189,6 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v11 YÜKLENDİ ===")
-print("Team Check, Max Distance, FOV düzeltildi.")
-print("Spinbot fly'ı bozmaz (sadece Y ekseninde döner).")
-print("HOTKEYS kategorisi eklendi - tüm tuş atamaları orada.")
+print("=== VISITING v12 YÜKLENDİ ===")
+print("Spinbot fixlendi, fly'ı bozmaz.")
+print("CONFIG kategorisi eklendi. Save/Load ile ayarlar kaydedilir.")
