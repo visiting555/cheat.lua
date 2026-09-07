@@ -1,4 +1,4 @@
--- VISITING v13 - FIXED AIMBOT + SILENT AIM + SPINBOT
+-- VISITING v14 - SOUND HACK EKLENDİ
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,7 +11,7 @@ local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V13"
+ScreenGui.Name = "VS_V14"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
@@ -56,7 +56,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v13"
+Txt.Text = "VISITING v14"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -98,7 +98,8 @@ local Features = {
     ESP = {state = false, box = false, name = false, skeleton = false, tracer = false, color = Color3.fromRGB(0,200,255), key = Enum.KeyCode.F7, mode = "Toggle"},
     DrawFOV = {state = false, key = Enum.KeyCode.F8, mode = "Toggle"},
     TeamCheck = {state = false, key = Enum.KeyCode.F9, mode = "Toggle"},
-    AntiAFK = {state = false}
+    AntiAFK = {state = false},
+    SoundLoop = {state = false, key = Enum.KeyCode.F10, mode = "Toggle"}
 }
 
 local Connections = {}
@@ -108,6 +109,7 @@ local FOVCircle = nil
 local Holding = {}
 local WalkSpeed = 16
 local FOVValue = 70
+local SoundLoopConnection = nil
 
 local function GetPlayerNames()
     local names = {}
@@ -152,6 +154,62 @@ local function FindRemoteEvent()
     return nil
 end
 local SpinRemote = FindRemoteEvent()
+
+-- SOUND HACK FONKSİYONLARI
+local function FindSoundRemote()
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            local n = v.Name:lower()
+            if n:find("sound") or n:find("play") or n:find("audio") or n:find("music") or n:find("effect") then
+                return v
+            end
+        end
+    end
+    return nil
+end
+
+local function PlayVisitingSound()
+    local soundRemote = FindSoundRemote()
+    local soundId = "rbxassetid://9120381532" -- Örnek ID, değiştirebilirsin
+    if soundRemote then
+        pcall(function()
+            soundRemote:FireServer(soundId, "play")
+        end)
+        print("[SOUND] RemoteEvent ile ses çalma komutu gönderildi. (Sunucu işlemezse kimse duymaz)")
+    else
+        -- Client-side ses çal
+        local sound = Instance.new("Sound")
+        sound.SoundId = soundId
+        sound.Volume = 10
+        sound.Parent = Workspace
+        local echo = Instance.new("EchoSoundEffect")
+        echo.Delay = 0.5
+        echo.DecayRate = 0.5
+        echo.WetLevel = 0.6
+        echo.DryLevel = 0.4
+        echo.Parent = sound
+        sound:Play()
+        print("[SOUND] Client-side ses çalındı (sadece sen duyarsın).")
+        task.delay(5, function()
+            sound:Destroy()
+        end)
+    end
+end
+
+function StartSoundLoop()
+    if SoundLoopConnection then SoundLoopConnection:Disconnect() end
+    SoundLoopConnection = RunService.RenderStepped:Connect(function()
+        if not Features.SoundLoop.state then return end
+        PlayVisitingSound()
+        task.wait(3)
+    end)
+    print("[SOUND LOOP] Aktif")
+end
+
+function StopSoundLoop()
+    if SoundLoopConnection then SoundLoopConnection:Disconnect(); SoundLoopConnection = nil end
+    print("[SOUND LOOP] Kapandı")
+end
 
 function StartFly()
     if Connections.Fly then Connections.Fly:Disconnect(); Connections.Fly = nil end
@@ -283,9 +341,6 @@ end
 
 function StartSilentAim()
     if Connections.SilentAim then Connections.SilentAim:Disconnect(); Connections.SilentAim = nil end
-    local oldFireServer = nil
-    local oldInvokeServer = nil
-    
     Connections.SilentAim = RunService.RenderStepped:Connect(function()
         if not Features.SilentAim.state then return end
         local target = GetTarget()
@@ -853,6 +908,26 @@ local function BuildCategory(cat)
             colorBtn.BackgroundColor3 = colors[idx]
             Features.ESP.color = colors[idx]
         end)
+    elseif cat == "SOUND" then
+        Section("SOUND HACK")
+        Toggle("Loop Sound", Features.SoundLoop.state, function(v)
+            Features.SoundLoop.state = v
+            if v then StartSoundLoop() else StopSoundLoop() end
+        end)
+        Button("Play Sound Once", function()
+            PlayVisitingSound()
+        end)
+        local soundInfo = Instance.new("TextLabel", Scroll)
+        soundInfo.Size = UDim2.new(1, -10, 0, 60)
+        soundInfo.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
+        soundInfo.Text = "RemoteEvent aranıyor...\nBulunursa FireServer gönderilir (sunucu işlemezse kimse duymaz).\nBulunamazsa client-side ses çalar (sadece sen duyarsın)."
+        soundInfo.TextColor3 = Color3.fromRGB(200, 200, 210)
+        soundInfo.Font = Enum.Font.Gotham
+        soundInfo.TextSize = 12
+        soundInfo.TextXAlignment = Enum.TextXAlignment.Left
+        soundInfo.TextYAlignment = Enum.TextYAlignment.Top
+        soundInfo.TextWrapped = true
+        Instance.new("UICorner", soundInfo).CornerRadius = UDim.new(0, 10)
     elseif cat == "HOTKEYS" then
         Section("HOTKEYS")
         KeybindRow("Fly", "Fly")
@@ -864,6 +939,7 @@ local function BuildCategory(cat)
         KeybindRow("ESP", "ESP")
         KeybindRow("DrawFOV", "Draw FOV")
         KeybindRow("TeamCheck", "Team Check")
+        KeybindRow("SoundLoop", "Sound Loop")
     elseif cat == "CONFIG" then
         Section("CONFIG")
         Button("Save Config", function()
@@ -1034,12 +1110,18 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v13 GUIDE
+          VISITING v14 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
+
+[SOUND HACK - YENİ!]
+RemoteEvent arar, bulursa FireServer gönderir (tüm sunucuya ulaşmaya çalışır).
+Bulamazsa client-side ses çalar (sadece sen duyarsın).
+Echo efekti ile yankılanır.
+Loop toggle ile sürekli çalabilir.
 
 [AIMBOT vs SILENT AIM FARKI]
 Aimbot: Kamera hedefe doğru hareket eder (FOV içinde)
@@ -1055,29 +1137,13 @@ Tüm tuş atamaları ve Hold/Toggle modları orada.
 Save Config → Tüm ayarları kaydeder
 Load Config → Kaydedilmiş ayarları yükler
 
-[MOVEMENT]
-Fly → W/A/S/D, Space up, Shift down
-NoClip → Duvarlardan geç
-
-[AIMBOT]
-Aimbot → Kamera hedefe doğru hareket eder
-Silent Aim → Mermi hedefe gider (kamera oynamaz)
-FOV → Görüş açısı
-Team Check → Takımına kilitlemez
-
-[ESP]
-Box, Name, Skeleton, Tracer, Color
-
-[UTILITY]
-Teleport, FOV, Anti AFK, Kill Target
-
 ═══════════════════════════════════════
         MADE FOR TESTING
         EDUCATIONAL USE ONLY
 ═══════════════════════════════════════
 ]]
         local g = Instance.new("TextLabel", Scroll)
-        g.Size = UDim2.new(1, -10, 0, 580)
+        g.Size = UDim2.new(1, -10, 0, 600)
         g.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
         g.Text = guideText
         g.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -1092,7 +1158,7 @@ Teleport, FOV, Anti AFK, Kill Target
     Scroll.CanvasSize = UDim2.new(0, 0, 0, #Scroll:GetChildren() * 52 + 100)
 end
 
-local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
+local Categories = {"MOVEMENT", "AIMBOT", "ESP", "SOUND", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
 local CatButtons = {}
 
 for i, cat in ipairs(Categories) do
@@ -1147,6 +1213,9 @@ local function ToggleFeature(name)
     elseif name == "TeamCheck" then
         feature.state = not feature.state
         print("[TEAM CHECK] " .. tostring(feature.state))
+    elseif name == "SoundLoop" then
+        feature.state = not feature.state
+        if feature.state then StartSoundLoop() else StopSoundLoop() end
     end
 end
 
@@ -1181,6 +1250,9 @@ local function SetFeatureState(name, state)
     elseif name == "TeamCheck" then
         feature.state = state
         print("[TEAM CHECK] " .. tostring(state))
+    elseif name == "SoundLoop" then
+        feature.state = state
+        if state then StartSoundLoop() else StopSoundLoop() end
     end
 end
 
@@ -1234,6 +1306,8 @@ local function ResetAll()
                 if Connections.FOVCircle then Connections.FOVCircle:Disconnect(); Connections.FOVCircle = nil end
             elseif name == "AntiAFK" then
                 if Connections.AFK then Connections.AFK:Disconnect(); Connections.AFK = nil end
+            elseif name == "SoundLoop" then
+                StopSoundLoop()
             end
         end
     end
@@ -1245,7 +1319,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v13 | INSERT | END"
+splash.Text = "VISITING v14 | INSERT | END | SOUND HACK EKLENDİ"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1255,7 +1329,8 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v13 YÜKLENDİ ===")
-print("Aimbot: Kamera hedefe doğru hareket eder.")
-print("Silent Aim: Aimbot'tan bağımsız, mermi hedefin kafasına gider.")
-print("Spinbot: Sadece döner, fly'ı bozmaz.")
+print("=== VISITING v14 YÜKLENDİ ===")
+print("SOUND HACK kategorisi eklendi.")
+print("RemoteEvent aranacak, bulunursa FireServer gönderilecek.")
+print("Bulunamazsa client-side ses çalacak (sadece sen duyarsın).")
+print("Echo efekti ile yankılanma eklendi.")
