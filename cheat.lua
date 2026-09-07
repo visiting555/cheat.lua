@@ -1,4 +1,4 @@
--- VISITING v13 - FIXED AIMBOT + SILENT AIM + SPINBOT
+-- VISITING v13 - FINAL FIXED
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -92,7 +92,7 @@ local Features = {
     Fly = {state = false, speed = 60, key = Enum.KeyCode.F1, mode = "Toggle"},
     NoClip = {state = false, key = Enum.KeyCode.F2, mode = "Toggle"},
     Aimbot = {state = false, fov = 120, smooth = 0.5, maxDist = 300, key = Enum.KeyCode.F3, mode = "Toggle"},
-    SilentAim = {state = false, fov = 120, maxDist = 300, key = Enum.KeyCode.F4, mode = "Toggle"},
+    SilentAim = {state = false, key = Enum.KeyCode.F4, mode = "Toggle"},
     Spinbot = {state = false, speed = 25, key = Enum.KeyCode.F5, mode = "Toggle"},
     MagicBullet = {state = false, key = Enum.KeyCode.F6, mode = "Toggle"},
     ESP = {state = false, box = false, name = false, skeleton = false, tracer = false, color = Color3.fromRGB(0,200,255), key = Enum.KeyCode.F7, mode = "Toggle"},
@@ -180,9 +180,7 @@ function StartFly()
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0, 1, 0) end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir -= Vector3.new(0, 1, 0) end
         bv.Velocity = dir.Magnitude > 0 and dir.Unit * Features.Fly.speed or Vector3.new()
-        if not Features.Spinbot.state then
-            bg.CFrame = camCF
-        end
+        bg.CFrame = camCF
     end)
     print("[FLY] Aktif")
 end
@@ -229,31 +227,27 @@ function StopNoClip()
 end
 
 local function GetTarget()
+    local closest, dist = nil, Features.Aimbot.fov
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myPos then return nil end
     local myTeam = LocalPlayer.Team
-    local closest, closestDist = nil, math.huge
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local fov = Features.Aimbot.fov
-    local maxDist = Features.Aimbot.maxDist
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LocalPlayer or not p.Character then continue end
         if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
         local head = p.Character:FindFirstChild("Head")
         if not head then continue end
-        local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-        if not onScreen then continue end
+        local pos, on = Camera:WorldToViewportPoint(head.Position)
+        if not on then continue end
         local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-        if d > fov then continue end
+        if d > dist then continue end
         local distance = (myPos.Position - head.Position).Magnitude
-        if distance > maxDist then continue end
+        if distance > Features.Aimbot.maxDist then continue end
         local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * distance)
         local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
         if hit and not hit:IsDescendantOf(p.Character) then continue end
-        if d < closestDist then
-            closestDist = d
-            closest = p
-        end
+        dist = d
+        closest = p
     end
     return closest
 end
@@ -264,7 +258,7 @@ function StartAimbot()
         if not Features.Aimbot.state then return end
         local target = GetTarget()
         if target and target.Character then
-            local head = target.Character:FindFirstChild("Head")
+            local head = target.Character.Head
             if head then
                 local targetCF = CFrame.new(Camera.CFrame.Position, head.Position)
                 local current = Camera.CFrame
@@ -283,52 +277,16 @@ end
 
 function StartSilentAim()
     if Connections.SilentAim then Connections.SilentAim:Disconnect(); Connections.SilentAim = nil end
-    local oldFireServer = nil
-    local oldInvokeServer = nil
-    
     Connections.SilentAim = RunService.RenderStepped:Connect(function()
         if not Features.SilentAim.state then return end
         local target = GetTarget()
         if target and target.Character then
-            local head = target.Character:FindFirstChild("Head")
+            local head = target.Character.Head
             if head then
-                local targetPos = head.Position
-                for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if v:IsA("RemoteEvent") then
-                        local name = v.Name:lower()
-                        if name:find("shoot") or name:find("fire") or name:find("attack") or name:find("bullet") or name:find("hit") then
-                            local old = v.FireServer
-                            v.FireServer = function(self, ...)
-                                local args = {...}
-                                for i, arg in ipairs(args) do
-                                    if type(arg) == "CFrame" then
-                                        args[i] = CFrame.new(arg.Position, targetPos)
-                                    elseif type(arg) == "Vector3" then
-                                        args[i] = targetPos
-                                    end
-                                end
-                                return old(self, unpack(args))
-                            end
-                        end
-                    end
-                    if v:IsA("RemoteFunction") then
-                        local name = v.Name:lower()
-                        if name:find("shoot") or name:find("fire") or name:find("attack") or name:find("bullet") or name:find("hit") then
-                            local old = v.InvokeServer
-                            v.InvokeServer = function(self, ...)
-                                local args = {...}
-                                for i, arg in ipairs(args) do
-                                    if type(arg) == "CFrame" then
-                                        args[i] = CFrame.new(arg.Position, targetPos)
-                                    elseif type(arg) == "Vector3" then
-                                        args[i] = targetPos
-                                    end
-                                end
-                                return old(self, unpack(args))
-                            end
-                        end
-                    end
-                end
+                local targetCF = CFrame.new(Camera.CFrame.Position, head.Position)
+                local current = Camera.CFrame
+                local new = current:Lerp(targetCF, Features.Aimbot.smooth)
+                Camera.CFrame = new
             end
         end
     end)
@@ -349,7 +307,8 @@ function StartSpinbot()
         if char then
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(SpinAngle), 0)
+                local oldCF = hrp.CFrame
+                hrp.CFrame = CFrame.new(oldCF.Position) * CFrame.Angles(0, math.rad(SpinAngle), 0)
                 if SpinRemote then
                     pcall(function()
                         SpinRemote:FireServer(hrp.CFrame)
@@ -375,6 +334,9 @@ function StartMagicBullet()
         if not char then return end
         local now = tick()
         local myTeam = LocalPlayer.Team
+        local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+        local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not myPos then return end
         for _, obj in ipairs(Workspace:GetChildren()) do
             for _, child in ipairs(obj:GetDescendants()) do
                 if child:IsA("BasePart") and child.Velocity.Magnitude > 20 then
@@ -382,16 +344,24 @@ function StartMagicBullet()
                     if n:find("bullet") or n:find("projectile") or n:find("shell") or n:find("rocket") or n:find("missile") or n:find("arrow") then
                         if not cache[child] or cache[child] < now - 0.3 then
                             cache[child] = now
-                            local closest, dist = nil, 400
+                            local closest, dist = nil, Features.Aimbot.fov
                             for _, p in ipairs(Players:GetPlayers()) do
                                 if p == LocalPlayer or not p.Character then continue end
                                 if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
                                 local head = p.Character:FindFirstChild("Head")
                                 if head then
-                                    local d = (head.Position - child.Position).Magnitude
-                                    if d < dist then
-                                        dist = d
-                                        closest = p
+                                    local pos, on = Camera:WorldToViewportPoint(head.Position)
+                                    if on then
+                                        local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                                        if d < dist then
+                                            local distance = (myPos.Position - head.Position).Magnitude
+                                            if distance > Features.Aimbot.maxDist then continue end
+                                            local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * distance)
+                                            local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
+                                            if hit and not hit:IsDescendantOf(p.Character) then continue end
+                                            dist = d
+                                            closest = p
+                                        end
                                     end
                                 end
                             end
@@ -560,13 +530,12 @@ end
 function DrawFOVCircle()
     if FOVCircle then FOVCircle:Remove() end
     if not Features.DrawFOV.state then return end
-    local fov = Features.Aimbot.state and Features.Aimbot.fov or Features.SilentAim.fov
     FOVCircle = Drawing.new("Circle")
     FOVCircle.Thickness = 1.5
     FOVCircle.Color = Color3.fromRGB(255, 255, 255)
     FOVCircle.Filled = false
     FOVCircle.NumSides = 64
-    FOVCircle.Radius = fov * 2.5
+    FOVCircle.Radius = Features.Aimbot.fov * 2.5
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     FOVCircle.Visible = true
     Connections.FOVCircle = RunService.RenderStepped:Connect(function()
@@ -575,9 +544,8 @@ function DrawFOVCircle()
             return
         end
         if FOVCircle then
-            local f = Features.Aimbot.state and Features.Aimbot.fov or Features.SilentAim.fov
             FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-            FOVCircle.Radius = f * 2.5
+            FOVCircle.Radius = Features.Aimbot.fov * 2.5
             FOVCircle.Visible = true
         end
     end)
@@ -802,22 +770,18 @@ local function BuildCategory(cat)
     elseif cat == "AIMBOT" then
         Section("AIMBOT")
         Toggle("Aimbot", Features.Aimbot.state, function(v) Features.Aimbot.state = v; if v then StartAimbot() else StopAimbot() end end)
+        Toggle("Silent Aim", Features.SilentAim.state, function(v) Features.SilentAim.state = v; if v then StartSilentAim() else StopSilentAim() end end)
+        Toggle("Team Check", Features.TeamCheck.state, function(v) Features.TeamCheck.state = v end)
         Slider("Aimbot FOV", 30, 300, Features.Aimbot.fov, function(v) Features.Aimbot.fov = v end)
         Slider("Aimbot Smooth", 1, 100, Features.Aimbot.smooth * 100, function(v) Features.Aimbot.smooth = v / 100 end)
         Slider("Max Distance", 100, 500, Features.Aimbot.maxDist, function(v) Features.Aimbot.maxDist = v end)
-        Section("SILENT AIM")
-        Toggle("Silent Aim", Features.SilentAim.state, function(v) Features.SilentAim.state = v; if v then StartSilentAim() else StopSilentAim() end end)
-        Slider("Silent FOV", 30, 300, Features.SilentAim.fov, function(v) Features.SilentAim.fov = v end)
-        Slider("Silent Distance", 100, 500, Features.SilentAim.maxDist, function(v) Features.SilentAim.maxDist = v end)
-        Section("TEAM CHECK")
-        Toggle("Team Check", Features.TeamCheck.state, function(v) Features.TeamCheck.state = v end)
-        Section("DRAW FOV")
-        Toggle("Draw FOV", Features.DrawFOV.state, function(v) Features.DrawFOV.state = v; if v then DrawFOVCircle() else if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end end end)
         Section("SPINBOT")
         Toggle("Spinbot", Features.Spinbot.state, function(v) Features.Spinbot.state = v; if v then StartSpinbot() else StopSpinbot() end end)
         Slider("Spin Speed", 1, 50, Features.Spinbot.speed, function(v) Features.Spinbot.speed = v end)
         Section("MAGIC BULLET")
         Toggle("Magic Bullet", Features.MagicBullet.state, function(v) Features.MagicBullet.state = v; if v then StartMagicBullet() else StopMagicBullet() end end)
+        Section("DRAW FOV")
+        Toggle("Draw FOV", Features.DrawFOV.state, function(v) Features.DrawFOV.state = v; if v then DrawFOVCircle() else if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end end end)
     elseif cat == "ESP" then
         Section("ESP")
         Toggle("ESP", Features.ESP.state, function(v) Features.ESP.state = v; if v then StartESP() else StopESP() end end)
@@ -1041,35 +1005,41 @@ local function BuildCategory(cat)
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[AIMBOT vs SILENT AIM FARKI]
-Aimbot: Kamera hedefe doğru hareket eder (FOV içinde)
-Silent Aim: Kamera oynamaz, mermi hedefin kafasına gider (FOV içinde)
-
-[SPINBOT]
-Sadece Y ekseninde döner, fly'ı bozmaz.
-
 [HOTKEYS KATEGORİSİ]
-Tüm tuş atamaları ve Hold/Toggle modları orada.
+Tüm tuş atamaları ve Hold/Toggle modları
+"HOTKEYS" bölümünden ayarlanabilir.
 
 [CONFIG KATEGORİSİ]
 Save Config → Tüm ayarları kaydeder
 Load Config → Kaydedilmiş ayarları yükler
 
 [MOVEMENT]
-Fly → W/A/S/D, Space up, Shift down
-NoClip → Duvarlardan geç
+Fly       → W/A/S/D move, Space up, Shift down
+NoClip    → Walk through walls
+Walk Speed→ Adjust running speed
 
 [AIMBOT]
-Aimbot → Kamera hedefe doğru hareket eder
-Silent Aim → Mermi hedefe gider (kamera oynamaz)
-FOV → Görüş açısı
-Team Check → Takımına kilitlemez
+Aimbot    → Auto-aim with wall check, Team Check, Max Distance
+Silent Aim→ Head lock WITHOUT Aimbot (works independently)
+FOV       → Aim field of view (drawable)
+Smooth    → Aim smoothness
+Magic Bullet→ Projectiles homing to target (FOV based)
+
+[SPINBOT]
+Spinbot   → Character spins (does not affect fly)
+Spin Speed→ Rotation speed
 
 [ESP]
 Box, Name, Skeleton, Tracer, Color
 
+[FOV]
+FOV Changer→ Camera field of view
+
+[TELEPORT]
+Select target, Teleport/Bring
+
 [UTILITY]
-Teleport, FOV, Anti AFK, Kill Target
+Anti AFK, Kill Target
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -1077,7 +1047,7 @@ Teleport, FOV, Anti AFK, Kill Target
 ═══════════════════════════════════════
 ]]
         local g = Instance.new("TextLabel", Scroll)
-        g.Size = UDim2.new(1, -10, 0, 580)
+        g.Size = UDim2.new(1, -10, 0, 550)
         g.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
         g.Text = guideText
         g.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -1245,7 +1215,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v13 | INSERT | END"
+splash.Text = "VISITING v13 | INSERT | END | Silent Aim Fixed"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1256,6 +1226,7 @@ task.delay(5, function() splash:Destroy() end)
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
 print("=== VISITING v13 YÜKLENDİ ===")
-print("Aimbot: Kamera hedefe doğru hareket eder.")
-print("Silent Aim: Aimbot'tan bağımsız, mermi hedefin kafasına gider.")
-print("Spinbot: Sadece döner, fly'ı bozmaz.")
+print("Silent Aim bağımsız çalışır (Aimbot gerekmez)")
+print("Aimbot ve Silent Aim aynı FOV kullanır")
+print("Magic Bullet FOV + TeamCheck + MaxDistance kullanır")
+print("Spinbot eski haline döndü")
