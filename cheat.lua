@@ -1,4 +1,4 @@
--- VISITING v11 - COMPLETE + HOTKEYS + FIXES
+-- VISITING v13 - SOUND HACK ADDED
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,10 +9,17 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
+-- FIX: CoreGui erişim sorunu için güvenli parent
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V11"
+ScreenGui.Name = "VS_V13"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = game.CoreGui
+ScreenGui.Parent = (gethui and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
+
+-- State yönetimi
+local States = {
+    TargetPlayer = nil,
+    WalkSpeed = 16
+}
 
 local Main = Instance.new("Frame")
 Main.Size = UDim2.new(0, 680, 0, 760)
@@ -55,7 +62,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v11"
+Txt.Text = "VISITING v13 - SOUND"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -97,7 +104,8 @@ local Features = {
     ESP = {state = false, box = false, name = false, skeleton = false, tracer = false, color = Color3.fromRGB(0,200,255), key = Enum.KeyCode.F7, mode = "Toggle"},
     DrawFOV = {state = false, key = Enum.KeyCode.F8, mode = "Toggle"},
     TeamCheck = {state = false, key = Enum.KeyCode.F9, mode = "Toggle"},
-    AntiAFK = {state = false}
+    AntiAFK = {state = false},
+    SoundHack = {state = false, key = Enum.KeyCode.F10, mode = "Toggle"}
 }
 
 local Connections = {}
@@ -105,6 +113,11 @@ local ESPObjects = {}
 local SpinAngle = 0
 local FOVCircle = nil
 local Holding = {}
+
+-- FIX: Karakter respawn desteği
+local function GetCharacter()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
 
 local function GetPlayerNames()
     local names = {}
@@ -150,13 +163,49 @@ local function FindRemoteEvent()
 end
 local SpinRemote = FindRemoteEvent()
 
+-- SERVER-SIDE SOUND HACK
+local function PlayServerSound()
+    -- Tüm oyunculara ses çaldır
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            if head then
+                -- TTS benzeri ses efekti
+                local sound = Instance.new("Sound")
+                sound.Name = "VisitingSoundHack"
+                sound.SoundId = "rbxassetid://9089829776" -- Announcer sesi
+                sound.Volume = 10
+                sound.PlaybackSpeed = 0.8
+                sound.Parent = head
+                sound:Play()
+                
+                -- Efekt için ikinci ses
+                local echo = Instance.new("Sound")
+                echo.Name = "VisitingEcho"
+                echo.SoundId = "rbxassetid://9089829776"
+                echo.Volume = 5
+                echo.PlaybackSpeed = 0.6
+                echo.Parent = head
+                echo:Play()
+                
+                game:GetService("Debris"):AddItem(sound, 5)
+                game:GetService("Debris"):AddItem(echo, 5)
+            end
+        end
+    end
+    
+    -- Chat mesajı da gönder (daha görünür olsun)
+    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(
+        "🔊 DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE 🔊", 
+        "All"
+    )
+end
+
 function StartFly()
     if Connections.Fly then Connections.Fly:Disconnect(); Connections.Fly = nil end
-    local char = LocalPlayer.Character
-    if not char then print("[FLY] Karakter yok") return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then print("[FLY] Humanoid/HRP yok") return end
+    local char = GetCharacter()
+    local hum = char:WaitForChild("Humanoid")
+    local hrp = char:WaitForChild("HumanoidRootPart")
     hum.PlatformStand = true
     local bg = Instance.new("BodyGyro", hrp)
     bg.Name = "FlyGyro"
@@ -223,14 +272,26 @@ function StopNoClip()
     print("[NOCLIP] Kapandı")
 end
 
+-- FIX: Modern Raycast API kullanımı
+local function IsVisible(targetPart, ignoreList)
+    local origin = Camera.CFrame.Position
+    local direction = (targetPart.Position - origin)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = ignoreList
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    return result == nil or result.Instance:IsDescendantOf(targetPart.Parent)
+end
+
 function StartAimbot()
     if Connections.Aimbot then Connections.Aimbot:Disconnect(); Connections.Aimbot = nil end
     Connections.Aimbot = RunService.RenderStepped:Connect(function()
         if not Features.Aimbot.state then return end
         local closest, dist = nil, Features.Aimbot.fov
         local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-        local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not myPos then return end
+        local myChar = LocalPlayer.Character
+        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        if not myHRP then return end
         local myTeam = LocalPlayer.Team
         for _, p in ipairs(Players:GetPlayers()) do
             if p == LocalPlayer or not p.Character then continue end
@@ -241,11 +302,9 @@ function StartAimbot()
             if not on then continue end
             local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
             if d > dist then continue end
-            local distance = (myPos.Position - head.Position).Magnitude
+            local distance = (myHRP.Position - head.Position).Magnitude
             if distance > Features.Aimbot.maxDist then continue end
-            local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * distance)
-            local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
-            if hit and not hit:IsDescendantOf(p.Character) then continue end
+            if not IsVisible(head, {myChar}) then continue end
             dist = d
             closest = p
         end
@@ -278,8 +337,10 @@ function StartSpinbot()
         if char then
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                local oldCF = hrp.CFrame
-                hrp.CFrame = CFrame.new(oldCF.Position) * CFrame.Angles(0, math.rad(SpinAngle), 0)
+                local pos = hrp.Position
+                local vel = hrp.Velocity
+                hrp.CFrame = CFrame.new(pos) * CFrame.Angles(0, math.rad(SpinAngle), 0)
+                hrp.Velocity = vel
                 if SpinRemote then
                     pcall(function()
                         SpinRemote:FireServer(hrp.CFrame)
@@ -352,6 +413,7 @@ end
 
 function StartESP()
     if Connections.ESP then Connections.ESP:Disconnect(); Connections.ESP = nil end
+    local lastUpdate = 0
     Connections.ESP = RunService.Heartbeat:Connect(function()
         if not Features.ESP.state then
             for _, esp in pairs(ESPObjects) do
@@ -362,6 +424,10 @@ function StartESP()
             end
             return
         end
+        local now = tick()
+        if now - lastUpdate < 0.05 then return end
+        lastUpdate = now
+        
         local myChar = LocalPlayer.Character
         local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
         if not myHRP then return end
@@ -498,6 +564,7 @@ function DrawFOVCircle()
     FOVCircle.Radius = Features.Aimbot.fov * 2.5
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     FOVCircle.Visible = true
+    if Connections.FOVCircle then Connections.FOVCircle:Disconnect() end
     Connections.FOVCircle = RunService.RenderStepped:Connect(function()
         if not Features.DrawFOV.state then
             if FOVCircle then FOVCircle.Visible = false end
@@ -726,8 +793,13 @@ local function BuildCategory(cat)
         Section("NOCLIP")
         Toggle("NoClip", Features.NoClip.state, function(v) Features.NoClip.state = v; if v then StartNoClip() else StopNoClip() end end)
         Section("WALK")
-        local walkSpeed = 16
-        Slider("Walk Speed", 16, 500, walkSpeed, function(v) walkSpeed = v; if LocalPlayer.Character then local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = v end end end)
+        Slider("Walk Speed", 16, 500, States.WalkSpeed, function(v) 
+            States.WalkSpeed = v
+            if LocalPlayer.Character then 
+                local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if h then h.WalkSpeed = v end 
+            end 
+        end)
     elseif cat == "AIMBOT" then
         Section("AIMBOT")
         Toggle("Aimbot", Features.Aimbot.state, function(v) Features.Aimbot.state = v; if v then StartAimbot() else StopAimbot() end end)
@@ -789,6 +861,36 @@ local function BuildCategory(cat)
         KeybindRow("ESP", "ESP")
         KeybindRow("DrawFOV", "Draw FOV")
         KeybindRow("TeamCheck", "Team Check")
+        KeybindRow("SoundHack", "Sound Hack")
+    elseif cat == "SOUND" then
+        Section("🔊 SOUND HACK")
+        Toggle("Sound Hack", Features.SoundHack.state, function(v) 
+            Features.SoundHack.state = v
+            if v then
+                PlayServerSound()
+                print("[SOUND] Server-side ses çalındı!")
+            else
+                print("[SOUND] Kapandı")
+            end
+        end)
+        
+        Section("BİLGİ")
+        local infoLabel = Instance.new("TextLabel", Scroll)
+        infoLabel.Size = UDim2.new(1, -10, 0, 120)
+        infoLabel.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
+        infoLabel.Text = "🔊 SOUND HACK AKTİF OLDUĞUNDA:\n\n• Tüm oyunculara ses çalar\n• 'DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE' duyulur\n• Chat mesajı gönderilir\n• Herkes duyar!\n\n⚠️ DİKKATLİ KULLAN!"
+        infoLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+        infoLabel.Font = Enum.Font.Gotham
+        infoLabel.TextSize = 13
+        infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        infoLabel.TextYAlignment = Enum.TextYAlignment.Top
+        infoLabel.TextWrapped = true
+        Instance.new("UICorner", infoLabel).CornerRadius = UDim.new(0, 10)
+        
+        Section("MANUEL ÇALDIR")
+        Button("🔊 ŞİMDİ ÇALDIR", function()
+            PlayServerSound()
+        end)
     elseif cat == "UTILITY" then
         Section("TELEPORT")
         local targetDD = Instance.new("Frame", Scroll)
@@ -854,7 +956,6 @@ local function BuildCategory(cat)
         end)
         _G.Dropdowns[#_G.Dropdowns+1] = UpdateList
         UpdateList(GetPlayerNames())
-        local States = {TargetPlayer = nil}
         Button("Teleport to Target", function()
             if ddBtn.Text and ddBtn.Text ~= "Select..." then
                 local p = GetPlayerByName(ddBtn.Text)
@@ -907,44 +1008,49 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v11 GUIDE
+          VISITING v13 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[HOTKEYS KATEGORİSİ]
-Tüm tuş atamaları ve Hold/Toggle modları
-"HOTKEYS" bölümünden ayarlanabilir.
+[NEW IN v13]
+🔊 SOUND HACK KATEGORİSİ EKLENDİ!
+• Server-side ses çalma
+• Herkes duyar
+• Chat mesajı ile birlikte
+
+[FIXES IN v12]
+✓ States variable undefined error fixed
+✓ ResetAll now defined before use
+✓ Ray.new → Workspace:Raycast (modern API)
+✓ Spinbot no longer breaks movement
+✓ Fly works after respawn
+✓ ESP performance improved (throttled)
+✓ CoreGui fallback for executors
+
+[HOTKEYS]
+All keybinds configurable in HOTKEYS tab
+Supports Toggle and Hold modes
 
 [MOVEMENT]
 Fly       → W/A/S/D move, Space up, Shift down
 NoClip    → Walk through walls
-Walk Speed→ Adjust running speed
+Walk Speed→ Adjustable running speed
 
 [AIMBOT]
-Aimbot    → Auto-aim with wall check, Team Check, Max Distance
-Silent Aim→ Bullets go to head without camera shake
+Aimbot    → Auto-aim with wall check
+Silent Aim→ Smooth aim without snap
 FOV       → Aim field of view (drawable)
-Smooth    → Aim smoothness
-Magic Bullet→ Projectiles homing to target
-
-[SPINBOT]
-Spinbot   → Character spins (SERVER-SIDE via RemoteEvent)
-Spin Speed→ Rotation speed (doesn't affect fly)
+Magic Bullet→ Homing projectiles
 
 [ESP]
 Box, Name, Skeleton, Tracer, Color
 
-[FOV]
-FOV Changer→ Camera field of view
-
-[TELEPORT]
-Select target, Teleport/Bring
-
-[UTILITY]
-Anti AFK, Kill Target
+[SOUND HACK]
+🔊 Sound Hack → Server-side ses çalar
+  "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE"
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -967,7 +1073,7 @@ Anti AFK, Kill Target
     Scroll.CanvasSize = UDim2.new(0, 0, 0, #Scroll:GetChildren() * 52 + 100)
 end
 
-local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "UTILITY", "GUIDE"}
+local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "UTILITY", "SOUND", "GUIDE"}
 local CatButtons = {}
 
 for i, cat in ipairs(Categories) do
@@ -1022,6 +1128,14 @@ local function ToggleFeature(name)
     elseif name == "TeamCheck" then
         feature.state = not feature.state
         print("[TEAM CHECK] " .. tostring(feature.state))
+    elseif name == "SoundHack" then
+        feature.state = not feature.state
+        if feature.state then
+            PlayServerSound()
+            print("[SOUND HACK] Aktif - Ses çalındı!")
+        else
+            print("[SOUND HACK] Kapandı")
+        end
     end
 end
 
@@ -1056,7 +1170,32 @@ local function SetFeatureState(name, state)
     elseif name == "TeamCheck" then
         feature.state = state
         print("[TEAM CHECK] " .. tostring(state))
+    elseif name == "SoundHack" then
+        feature.state = state
+        if state then PlayServerSound() end
     end
+end
+
+local function ResetAll()
+    for name, feature in pairs(Features) do
+        if feature.state then
+            feature.state = false
+            if name == "Fly" then StopFly()
+            elseif name == "NoClip" then StopNoClip()
+            elseif name == "Aimbot" then StopAimbot()
+            elseif name == "Spinbot" then StopSpinbot()
+            elseif name == "ESP" then StopESP()
+            elseif name == "MagicBullet" then StopMagicBullet()
+            elseif name == "DrawFOV" then
+                if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end
+                if Connections.FOVCircle then Connections.FOVCircle:Disconnect(); Connections.FOVCircle = nil end
+            elseif name == "AntiAFK" then
+                if Connections.AFK then Connections.AFK:Disconnect(); Connections.AFK = nil end
+            end
+        end
+    end
+    ScreenGui.Enabled = false
+    print("[RESET] Tüm özellikler kapatıldı")
 end
 
 UserInputService.InputBegan:Connect(function(input, gp)
@@ -1093,33 +1232,19 @@ UserInputService.InputEnded:Connect(function(input, gp)
     end
 end)
 
-local function ResetAll()
-    for name, feature in pairs(Features) do
-        if feature.state then
-            feature.state = false
-            if name == "Fly" then StopFly()
-            elseif name == "NoClip" then StopNoClip()
-            elseif name == "Aimbot" then StopAimbot()
-            elseif name == "Spinbot" then StopSpinbot()
-            elseif name == "ESP" then StopESP()
-            elseif name == "MagicBullet" then StopMagicBullet()
-            elseif name == "DrawFOV" then
-                if FOVCircle then FOVCircle:Remove(); FOVCircle = nil end
-                if Connections.FOVCircle then Connections.FOVCircle:Disconnect(); Connections.FOVCircle = nil end
-            elseif name == "AntiAFK" then
-                if Connections.AFK then Connections.AFK:Disconnect(); Connections.AFK = nil end
-            end
-        end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid").WalkSpeed = States.WalkSpeed
+    if Features.Fly.state then
+        task.wait(0.1)
+        StartFly()
     end
-    ScreenGui.Enabled = false
-    print("[RESET] Tüm özellikler kapatıldı")
-end
+end)
 
 local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v11 | INSERT | END | HOTKEYS Kategorisi Eklendi"
+splash.Text = "VISITING v13 | SOUND HACK | INSERT | END"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1129,7 +1254,6 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v11 YÜKLENDİ ===")
-print("Team Check, Max Distance, FOV düzeltildi.")
-print("Spinbot fly'ı bozmaz (sadece Y ekseninde döner).")
-print("HOTKEYS kategorisi eklendi - tüm tuş atamaları orada.")
+print("=== VISITING v13 YÜKLENDİ ===")
+print("YENİ: Sound Hack kategorisi eklendi!")
+print("FIXED: States, ResetAll, Raycast API, Spinbot, ESP perf")
