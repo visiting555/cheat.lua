@@ -1,4 +1,4 @@
--- VISITING v15 - SCREEN HACK
+-- VISITING v13 - FIXED AIMBOT + SILENT AIM + SPINBOT
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,7 +11,7 @@ local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V15"
+ScreenGui.Name = "VS_V13"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
@@ -56,7 +56,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v15"
+Txt.Text = "VISITING v13"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -98,8 +98,7 @@ local Features = {
     ESP = {state = false, box = false, name = false, skeleton = false, tracer = false, color = Color3.fromRGB(0,200,255), key = Enum.KeyCode.F7, mode = "Toggle"},
     DrawFOV = {state = false, key = Enum.KeyCode.F8, mode = "Toggle"},
     TeamCheck = {state = false, key = Enum.KeyCode.F9, mode = "Toggle"},
-    AntiAFK = {state = false},
-    ScreenHack = {state = false, key = Enum.KeyCode.F10, mode = "Toggle"}
+    AntiAFK = {state = false}
 }
 
 local Connections = {}
@@ -109,9 +108,6 @@ local FOVCircle = nil
 local Holding = {}
 local WalkSpeed = 16
 local FOVValue = 70
-local ScreenLoopConnection = nil
-local ScreenRemote = nil
-local RemoteFound = false
 
 local function GetPlayerNames()
     local names = {}
@@ -139,7 +135,7 @@ end
 Players.PlayerAdded:Connect(function() task.wait(0.5) UpdateAllDropdowns() end)
 Players.PlayerRemoving:Connect(function() task.wait(0.5) UpdateAllDropdowns() end)
 
-local function FindSpinRemote()
+local function FindRemoteEvent()
     for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
         if v:IsA("RemoteEvent") then
             local n = v.Name:lower()
@@ -149,26 +145,13 @@ local function FindSpinRemote()
         end
     end
     for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") then return v end
-    end
-    return nil
-end
-local SpinRemote = FindSpinRemote()
-
-function FindScreenRemote()
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
         if v:IsA("RemoteEvent") then
-            local n = v.Name:lower()
-            if n:find("screen") or n:find("message") or n:find("broadcast") or n:find("chat") or n:find("announce") or n:find("gui") or n:find("notification") or n:find("display") then
-                return v
-            end
+            return v
         end
     end
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") then return v end
-    end
     return nil
 end
+local SpinRemote = FindRemoteEvent()
 
 function StartFly()
     if Connections.Fly then Connections.Fly:Disconnect(); Connections.Fly = nil end
@@ -300,6 +283,9 @@ end
 
 function StartSilentAim()
     if Connections.SilentAim then Connections.SilentAim:Disconnect(); Connections.SilentAim = nil end
+    local oldFireServer = nil
+    local oldInvokeServer = nil
+    
     Connections.SilentAim = RunService.RenderStepped:Connect(function()
         if not Features.SilentAim.state then return end
         local target = GetTarget()
@@ -597,53 +583,6 @@ function DrawFOVCircle()
     end)
 end
 
--- SCREEN HACK FONKSİYONLARI
-function StartScreenHack()
-    if ScreenLoopConnection then ScreenLoopConnection:Disconnect() end
-    ScreenRemote = FindScreenRemote()
-    if ScreenRemote then
-        RemoteFound = true
-        print("[SCREEN] RemoteEvent tespit edildi: " .. ScreenRemote.Name)
-    else
-        RemoteFound = false
-        print("[SCREEN] RemoteEvent bulunamadı, client-side çalışacak.")
-    end
-    ScreenLoopConnection = RunService.RenderStepped:Connect(function()
-        if not Features.ScreenHack.state then return end
-        local msg = "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE"
-        if ScreenRemote then
-            pcall(function()
-                ScreenRemote:FireServer(msg)
-                print("[SCREEN] FireServer gönderildi: " .. msg)
-            end)
-        else
-            pcall(function()
-                local notif = Instance.new("TextLabel")
-                notif.Size = UDim2.new(1, 0, 0.2, 0)
-                notif.Position = UDim2.new(0, 0, 0.4, 0)
-                notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                notif.BackgroundTransparency = 0.3
-                notif.Text = msg
-                notif.TextColor3 = Color3.fromRGB(255, 255, 0)
-                notif.Font = Enum.Font.GothamBlack
-                notif.TextSize = 60
-                notif.TextScaled = true
-                notif.Parent = ScreenGui
-                notif.ZIndex = 999
-                task.delay(2, function() notif:Destroy() end)
-                print("[SCREEN] Client-side mesaj gösterildi (sadece sen görürsün).")
-            end)
-        end
-        task.wait(3)
-    end)
-    print("[SCREEN HACK] Aktif")
-end
-
-function StopScreenHack()
-    if ScreenLoopConnection then ScreenLoopConnection:Disconnect(); ScreenLoopConnection = nil end
-    print("[SCREEN HACK] Kapandı")
-end
-
 local function ClearRight()
     for _, v in ipairs(RightPanel:GetChildren()) do
         if v:IsA("ScrollingFrame") then v:Destroy() end
@@ -914,59 +853,6 @@ local function BuildCategory(cat)
             colorBtn.BackgroundColor3 = colors[idx]
             Features.ESP.color = colors[idx]
         end)
-    elseif cat == "SCREEN" then
-        Section("SCREEN HACK")
-        Toggle("Screen Hack", Features.ScreenHack.state, function(v)
-            Features.ScreenHack.state = v
-            if v then StartScreenHack() else StopScreenHack() end
-        end)
-        Button("Find RemoteEvent", function()
-            local rem = FindScreenRemote()
-            if rem then
-                print("[SCREEN] RemoteEvent tespit edildi: " .. rem.Name)
-                ScreenRemote = rem
-                RemoteFound = true
-            else
-                print("[SCREEN] RemoteEvent bulunamadı! (Client-side modda)")
-                RemoteFound = false
-                ScreenRemote = nil
-            end
-        end)
-        local infoText = Instance.new("TextLabel", Scroll)
-        infoText.Size = UDim2.new(1, -10, 0, 80)
-        infoText.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        infoText.Text = "RemoteEvent aranıyor...\nBulunursa FireServer ile mesaj gönderilir (sunucu işlemezse kimse görmez).\nBulunamazsa client-side mesaj gösterilir (sadece sen görürsün)."
-        infoText.TextColor3 = Color3.fromRGB(200, 200, 210)
-        infoText.Font = Enum.Font.Gotham
-        infoText.TextSize = 12
-        infoText.TextXAlignment = Enum.TextXAlignment.Left
-        infoText.TextYAlignment = Enum.TextYAlignment.Top
-        infoText.TextWrapped = true
-        Instance.new("UICorner", infoText).CornerRadius = UDim.new(0, 10)
-        Button("Test Mesajı", function()
-            local msg = "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE"
-            if ScreenRemote then
-                pcall(function()
-                    ScreenRemote:FireServer(msg)
-                    print("[SCREEN] Test FireServer gönderildi: " .. msg)
-                end)
-            else
-                local notif = Instance.new("TextLabel")
-                notif.Size = UDim2.new(1, 0, 0.2, 0)
-                notif.Position = UDim2.new(0, 0, 0.4, 0)
-                notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                notif.BackgroundTransparency = 0.3
-                notif.Text = msg
-                notif.TextColor3 = Color3.fromRGB(255, 255, 0)
-                notif.Font = Enum.Font.GothamBlack
-                notif.TextSize = 60
-                notif.TextScaled = true
-                notif.Parent = ScreenGui
-                notif.ZIndex = 999
-                task.delay(3, function() notif:Destroy() end)
-                print("[SCREEN] Client-side test mesajı gösterildi.")
-            end
-        end)
     elseif cat == "HOTKEYS" then
         Section("HOTKEYS")
         KeybindRow("Fly", "Fly")
@@ -978,7 +864,6 @@ local function BuildCategory(cat)
         KeybindRow("ESP", "ESP")
         KeybindRow("DrawFOV", "Draw FOV")
         KeybindRow("TeamCheck", "Team Check")
-        KeybindRow("ScreenHack", "Screen Hack")
     elseif cat == "CONFIG" then
         Section("CONFIG")
         Button("Save Config", function()
@@ -1149,26 +1034,42 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v15 GUIDE
+          VISITING v13 GUIDE
 ═══════════════════════════════════════
-
-[SCREEN HACK]
-- "Find RemoteEvent" butonuna tıkla (1 kere yeter).
-- Konsoldan (F9) sonucu kontrol et.
-- RemoteEvent bulunursa FireServer gönderir.
-- Bulunamazsa client-side mesaj gösterir.
-- "Screen Hack" toggle ile sürekli çalıştır.
-- "Test Mesajı" ile dene.
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[HOTKEYS]
-Tüm tuş atamaları HOTKEYS kategorisinde.
+[AIMBOT vs SILENT AIM FARKI]
+Aimbot: Kamera hedefe doğru hareket eder (FOV içinde)
+Silent Aim: Kamera oynamaz, mermi hedefin kafasına gider (FOV içinde)
 
-[CONFIG]
-Save/Load ayarları.
+[SPINBOT]
+Sadece Y ekseninde döner, fly'ı bozmaz.
+
+[HOTKEYS KATEGORİSİ]
+Tüm tuş atamaları ve Hold/Toggle modları orada.
+
+[CONFIG KATEGORİSİ]
+Save Config → Tüm ayarları kaydeder
+Load Config → Kaydedilmiş ayarları yükler
+
+[MOVEMENT]
+Fly → W/A/S/D, Space up, Shift down
+NoClip → Duvarlardan geç
+
+[AIMBOT]
+Aimbot → Kamera hedefe doğru hareket eder
+Silent Aim → Mermi hedefe gider (kamera oynamaz)
+FOV → Görüş açısı
+Team Check → Takımına kilitlemez
+
+[ESP]
+Box, Name, Skeleton, Tracer, Color
+
+[UTILITY]
+Teleport, FOV, Anti AFK, Kill Target
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -1176,7 +1077,7 @@ Save/Load ayarları.
 ═══════════════════════════════════════
 ]]
         local g = Instance.new("TextLabel", Scroll)
-        g.Size = UDim2.new(1, -10, 0, 450)
+        g.Size = UDim2.new(1, -10, 0, 580)
         g.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
         g.Text = guideText
         g.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -1191,7 +1092,7 @@ Save/Load ayarları.
     Scroll.CanvasSize = UDim2.new(0, 0, 0, #Scroll:GetChildren() * 52 + 100)
 end
 
-local Categories = {"MOVEMENT", "AIMBOT", "ESP", "SCREEN", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
+local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
 local CatButtons = {}
 
 for i, cat in ipairs(Categories) do
@@ -1246,9 +1147,6 @@ local function ToggleFeature(name)
     elseif name == "TeamCheck" then
         feature.state = not feature.state
         print("[TEAM CHECK] " .. tostring(feature.state))
-    elseif name == "ScreenHack" then
-        feature.state = not feature.state
-        if feature.state then StartScreenHack() else StopScreenHack() end
     end
 end
 
@@ -1283,9 +1181,6 @@ local function SetFeatureState(name, state)
     elseif name == "TeamCheck" then
         feature.state = state
         print("[TEAM CHECK] " .. tostring(state))
-    elseif name == "ScreenHack" then
-        feature.state = state
-        if state then StartScreenHack() else StopScreenHack() end
     end
 end
 
@@ -1339,8 +1234,6 @@ local function ResetAll()
                 if Connections.FOVCircle then Connections.FOVCircle:Disconnect(); Connections.FOVCircle = nil end
             elseif name == "AntiAFK" then
                 if Connections.AFK then Connections.AFK:Disconnect(); Connections.AFK = nil end
-            elseif name == "ScreenHack" then
-                StopScreenHack()
             end
         end
     end
@@ -1352,7 +1245,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v15 | INSERT | END | SCREEN HACK"
+splash.Text = "VISITING v13 | INSERT | END"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1362,6 +1255,7 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v15 YÜKLENDİ ===")
-print("SCREEN HACK kategorisinde 'Find RemoteEvent' butonuna tıkla!")
-print("Sonra 'Test Mesajı' ile dene veya toggle'ı aç.")
+print("=== VISITING v13 YÜKLENDİ ===")
+print("Aimbot: Kamera hedefe doğru hareket eder.")
+print("Silent Aim: Aimbot'tan bağımsız, mermi hedefin kafasına gider.")
+print("Spinbot: Sadece döner, fly'ı bozmaz.")
