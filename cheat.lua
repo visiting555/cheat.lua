@@ -1,4 +1,4 @@
--- VISITING v14 - SOUND HACK FIXED
+-- VISITING v15 - ECHO SOUND SYSTEM
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -10,7 +10,7 @@ local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V14"
+ScreenGui.Name = "VS_V15"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = (gethui and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
 
@@ -60,7 +60,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v14 - SOUND FIXED"
+Txt.Text = "VISITING v15 - ECHO"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -161,55 +161,72 @@ end
 local SpinRemote = FindRemoteEvent()
 
 -- ============================================
--- SOUND HACK - GERÇEK ÇALIŞAN VERSİYON
+-- ECHO SOUND SYSTEM - YANKILI SES
 -- ============================================
-local SoundIds = {
-    "rbxassetid://9089829776",  -- Announcer
-    "rbxassetid://142376088",   -- Epic horn
-    "rbxassetid://165969964",   -- Air horn
-    "rbxassetid://131886810",   -- MLG horn
-    "rbxassetid://2493188197",  -- Bruh
-    "rbxassetid://154957429",   -- Oof
+local EchoSoundIds = {
+    "rbxassetid://142376088",   -- Ses 2 (çalışan)
+    "rbxassetid://165969964",   -- Ses 3 (çalışan)
 }
 
-local CurrentSoundIndex = 1
+local CurrentEchoIndex = 1
 
+-- Yankılı ses sistemi - her oyuncuya sırayla ve gecikmeli çalar
+local function PlayEchoSound(player, soundId, delay, volume, speed)
+    task.wait(delay)
+    if player.Character then
+        local head = player.Character:FindFirstChild("Head")
+        if head then
+            local sound = Instance.new("Sound")
+            sound.Name = "VisitingEcho_" .. delay
+            sound.SoundId = soundId
+            sound.Volume = volume
+            sound.PlaybackSpeed = speed
+            sound.Parent = head
+            sound:Play()
+            game:GetService("Debris"):AddItem(sound, 3)
+        end
+    end
+end
+
+-- Ana ses fonksiyonu - TÜM OYUNCULARA YANKILI SES
 local function PlayServerSound()
-    -- Tüm oyunculara ses çaldır
+    local soundId = EchoSoundIds[CurrentEchoIndex]
+    
+    -- Tüm oyunculara çal
     for _, player in ipairs(Players:GetPlayers()) do
         if player.Character then
             local head = player.Character:FindFirstChild("Head")
             if head then
-                -- Ana ses
-                local sound = Instance.new("Sound")
-                sound.Name = "VisitingSoundHack"
-                sound.SoundId = SoundIds[CurrentSoundIndex]
-                sound.Volume = 10
-                sound.PlaybackSpeed = 0.9
-                sound.Parent = head
-                sound:Play()
+                -- Ana ses (yüksek volüm)
+                local mainSound = Instance.new("Sound")
+                mainSound.Name = "VisitingMain"
+                mainSound.SoundId = soundId
+                mainSound.Volume = 10
+                mainSound.PlaybackSpeed = 0.85
+                mainSound.Parent = head
+                mainSound:Play()
                 
-                -- Yankı efekti
-                local echo = Instance.new("Sound")
-                echo.Name = "VisitingEcho"
-                echo.SoundId = SoundIds[CurrentSoundIndex]
-                echo.Volume = 6
-                echo.PlaybackSpeed = 0.7
-                echo.Parent = head
-                echo:Play()
+                -- Yankı 1 (0.2s gecikme, daha yavaş)
+                task.spawn(function()
+                    PlayEchoSound(player, soundId, 0.2, 7, 0.7)
+                end)
                 
-                -- 3. katman
-                local echo2 = Instance.new("Sound")
-                echo2.Name = "VisitingEcho2"
-                echo2.SoundId = SoundIds[CurrentSoundIndex]
-                echo2.Volume = 4
-                echo2.PlaybackSpeed = 0.5
-                echo2.Parent = head
-                echo2:Play()
+                -- Yankı 2 (0.4s gecikme, daha yavaş)
+                task.spawn(function()
+                    PlayEchoSound(player, soundId, 0.4, 5, 0.6)
+                end)
                 
-                game:GetService("Debris"):AddItem(sound, 5)
-                game:GetService("Debris"):AddItem(echo, 5)
-                game:GetService("Debris"):AddItem(echo2, 5)
+                -- Yankı 3 (0.6s gecikme, çok yavaş)
+                task.spawn(function()
+                    PlayEchoSound(player, soundId, 0.6, 3, 0.5)
+                end)
+                
+                -- Yankı 4 (0.8s gecikme, en yavaş)
+                task.spawn(function()
+                    PlayEchoSound(player, soundId, 0.8, 2, 0.4)
+                end)
+                
+                game:GetService("Debris"):AddItem(mainSound, 3)
             end
         end
     end
@@ -222,25 +239,47 @@ local function PlayServerSound()
         )
     end)
     
-    -- Sonraki ses için index değiştir
-    CurrentSoundIndex = CurrentSoundIndex % #SoundIds + 1
-    
-    print("[SOUND] Çalındı! ID: " .. SoundIds[CurrentSoundIndex])
+    -- Sonraki ses için değiştir
+    CurrentEchoIndex = CurrentEchoIndex % #EchoSoundIds + 1
+    print("[ECHO SOUND] Çalındı! ID: " .. soundId)
 end
 
--- Test sesi (kendi client'ında çal)
-local function TestSound()
+-- Test fonksiyonu (sadece kendi client'ında)
+local function TestEchoSound()
+    local soundId = EchoSoundIds[CurrentEchoIndex]
     local char = LocalPlayer.Character
     if char then
         local head = char:FindFirstChild("Head")
         if head then
-            local sound = Instance.new("Sound")
-            sound.SoundId = SoundIds[CurrentSoundIndex]
-            sound.Volume = 10
-            sound.Parent = head
-            sound:Play()
-            game:GetService("Debris"):AddItem(sound, 5)
-            print("[TEST] Ses çalındı: " .. SoundIds[CurrentSoundIndex])
+            -- Ana ses
+            local main = Instance.new("Sound")
+            main.SoundId = soundId
+            main.Volume = 10
+            main.PlaybackSpeed = 0.85
+            main.Parent = head
+            main:Play()
+            
+            -- Yankılar
+            local delays = {0.2, 0.4, 0.6, 0.8}
+            local volumes = {7, 5, 3, 2}
+            local speeds = {0.7, 0.6, 0.5, 0.4}
+            
+            for i = 1, 4 do
+                task.delay(delays[i], function()
+                    if head and head.Parent then
+                        local echo = Instance.new("Sound")
+                        echo.SoundId = soundId
+                        echo.Volume = volumes[i]
+                        echo.PlaybackSpeed = speeds[i]
+                        echo.Parent = head
+                        echo:Play()
+                        game:GetService("Debris"):AddItem(echo, 2)
+                    end
+                end)
+            end
+            
+            game:GetService("Debris"):AddItem(main, 3)
+            print("[TEST] Echo ses çalındı!")
         end
     end
 end
@@ -906,7 +945,7 @@ local function BuildCategory(cat)
         KeybindRow("TeamCheck", "Team Check")
         KeybindRow("SoundHack", "Sound Hack")
     elseif cat == "SOUND" then
-        Section("🔊 SOUND HACK - FIXED")
+        Section("🔊 ECHO SOUND SYSTEM")
         Toggle("Sound Hack", Features.SoundHack.state, function(v) 
             Features.SoundHack.state = v
             if v then
@@ -917,24 +956,24 @@ local function BuildCategory(cat)
         end)
         
         Section("TEST")
-        Button("🔊 TEST SESİ ÇAL (Kendi Client'ında)", function()
-            TestSound()
+        Button("🔊 YANKILI SESİ TEST ET", function()
+            TestEchoSound()
         end)
         
         Section("SES SEÇ")
-        for i, id in ipairs(SoundIds) do
-            Button("Ses #" .. i .. " - " .. id:gsub("rbxassetid://", ""), function()
-                CurrentSoundIndex = i
+        for i, id in ipairs(EchoSoundIds) do
+            Button("Echo Ses #" .. i .. " - " .. id:gsub("rbxassetid://", ""), function()
+                CurrentEchoIndex = i
                 print("[SOUND] Seçildi: " .. id)
-                TestSound()
+                TestEchoSound()
             end)
         end
         
         Section("BİLGİ")
         local infoLabel = Instance.new("TextLabel", Scroll)
-        infoLabel.Size = UDim2.new(1, -10, 0, 150)
+        infoLabel.Size = UDim2.new(1, -10, 0, 180)
         infoLabel.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        infoLabel.Text = "🔊 SOUND HACK NASIL ÇALIŞIR:\n\n1. Önce TEST SESİ ÇAL butonuna bas\n2. Ses duyuyorsan, SOUND HACK'i aç\n3. Duymuyorsan farklı ses ID'si dene\n\n⚠️ Bazı sesler Roblox tarafından silinmiş olabilir!\n⚠️ Her oyun farklı seslere izin verir!\n\n💡 ÇÖZÜM: Kendi ses ID'lerini ekle!"
+        infoLabel.Text = "🔊 ECHO SOUND SYSTEM NASIL ÇALIŞIR:\n\n• Ana ses çalar (Volume: 10)\n• 4 yankı sesi sırayla çalar\n• Her yankı daha yavaş ve sessiz\n• 0.2s, 0.4s, 0.6s, 0.8s gecikmeler\n• Tüm oyuncular duyar!\n\n⚠️ Roblox TTS desteklemez, bu yüzden\nyankı efekti ile ses oluşturulur.\n\n💡 DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE"
         infoLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
         infoLabel.Font = Enum.Font.Gotham
         infoLabel.TextSize = 13
@@ -1059,39 +1098,36 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v14 GUIDE
+          VISITING v15 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[NEW IN v14]
-🔊 SOUND HACK DÜZELTİLDİ!
-• 6 farklı ses ID'si eklendi
-• Test butonu eklendi
-• Ses seçme butonları
+[NEW IN v15]
+🔊 ECHO SOUND SYSTEM EKLENDİ!
+• Yankılı ses efekti
+• 4 katmanlı echo
+• Tüm oyuncular duyar
+• Server-side çalışır
 
-[SOUND HACK NASIL KULLANILIR]
-1. SOUND kategorisine git
-2. TEST SESİ ÇAL butonuna bas
-3. Ses duyuyorsan → Sound Hack ON yap
-4. Ses duymuyorsan → farklı ses ID'si dene
+[ECHO SOUND NASIL ÇALIŞIR]
+1. Ana ses çalar (Volume: 10)
+2. 0.2s sonra yankı 1 (Volume: 7)
+3. 0.4s sonra yankı 2 (Volume: 5)
+4. 0.6s sonra yankı 3 (Volume: 3)
+5. 0.8s sonra yankı 4 (Volume: 2)
 
-⚠️ ÖNEMLİ: Bazı sesler Roblox'ta silinmiş olabilir!
-Eğer hiçbir ses çalışmıyorsa, kendi ses ID'lerini ekle.
+Her yankı daha yavaş çalar!
+Bu sayede gerçek echo efekti oluşur!
 
-[KENDİ SESİNİ EKLEMEK]
-SoundIds table'ına yeni ID ekle:
-"rbxassetid://SENIN_ID_BURAYA"
+[SES ID'LERİ]
+• Ses 2: rbxassetid://142376088
+• Ses 3: rbxassetid://165969964
 
-[FIXES IN v12-13]
-✓ States variable undefined error fixed
-✓ ResetAll now defined before use
-✓ Ray.new → Workspace:Raycast (modern API)
-✓ Spinbot no longer breaks movement
-✓ Fly works after respawn
-✓ ESP performance improved (throttled)
+⚠️ Roblox TTS desteklemez!
+Yankı efekti ile ses oluşturulur.
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -1285,7 +1321,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v14 | SOUND FIXED | INSERT | END"
+splash.Text = "VISITING v15 | ECHO SOUND | INSERT | END"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1295,6 +1331,6 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v14 YÜKLENDİ ===")
-print("YENİ: 6 farklı ses ID'si + Test butonu!")
+print("=== VISITING v15 YÜKLENDİ ===")
+print("YENİ: Echo Sound System - 4 katmanlı yankı!")
 print("SOUND kategorisinden test edebilirsin.")
