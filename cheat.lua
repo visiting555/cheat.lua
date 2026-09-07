@@ -1,4 +1,4 @@
--- VISITING v13 - SOUND HACK ADDED
+-- VISITING v14 - SOUND HACK FIXED
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,13 +9,11 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- FIX: CoreGui erişim sorunu için güvenli parent
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V13"
+ScreenGui.Name = "VS_V14"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = (gethui and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
 
--- State yönetimi
 local States = {
     TargetPlayer = nil,
     WalkSpeed = 16
@@ -62,7 +60,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v13 - SOUND"
+Txt.Text = "VISITING v14 - SOUND FIXED"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -114,7 +112,6 @@ local SpinAngle = 0
 local FOVCircle = nil
 local Holding = {}
 
--- FIX: Karakter respawn desteği
 local function GetCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
@@ -163,42 +160,89 @@ local function FindRemoteEvent()
 end
 local SpinRemote = FindRemoteEvent()
 
--- SERVER-SIDE SOUND HACK
+-- ============================================
+-- SOUND HACK - GERÇEK ÇALIŞAN VERSİYON
+-- ============================================
+local SoundIds = {
+    "rbxassetid://9089829776",  -- Announcer
+    "rbxassetid://142376088",   -- Epic horn
+    "rbxassetid://165969964",   -- Air horn
+    "rbxassetid://131886810",   -- MLG horn
+    "rbxassetid://2493188197",  -- Bruh
+    "rbxassetid://154957429",   -- Oof
+}
+
+local CurrentSoundIndex = 1
+
 local function PlayServerSound()
     -- Tüm oyunculara ses çaldır
     for _, player in ipairs(Players:GetPlayers()) do
         if player.Character then
             local head = player.Character:FindFirstChild("Head")
             if head then
-                -- TTS benzeri ses efekti
+                -- Ana ses
                 local sound = Instance.new("Sound")
                 sound.Name = "VisitingSoundHack"
-                sound.SoundId = "rbxassetid://9089829776" -- Announcer sesi
+                sound.SoundId = SoundIds[CurrentSoundIndex]
                 sound.Volume = 10
-                sound.PlaybackSpeed = 0.8
+                sound.PlaybackSpeed = 0.9
                 sound.Parent = head
                 sound:Play()
                 
-                -- Efekt için ikinci ses
+                -- Yankı efekti
                 local echo = Instance.new("Sound")
                 echo.Name = "VisitingEcho"
-                echo.SoundId = "rbxassetid://9089829776"
-                echo.Volume = 5
-                echo.PlaybackSpeed = 0.6
+                echo.SoundId = SoundIds[CurrentSoundIndex]
+                echo.Volume = 6
+                echo.PlaybackSpeed = 0.7
                 echo.Parent = head
                 echo:Play()
                 
+                -- 3. katman
+                local echo2 = Instance.new("Sound")
+                echo2.Name = "VisitingEcho2"
+                echo2.SoundId = SoundIds[CurrentSoundIndex]
+                echo2.Volume = 4
+                echo2.PlaybackSpeed = 0.5
+                echo2.Parent = head
+                echo2:Play()
+                
                 game:GetService("Debris"):AddItem(sound, 5)
                 game:GetService("Debris"):AddItem(echo, 5)
+                game:GetService("Debris"):AddItem(echo2, 5)
             end
         end
     end
     
-    -- Chat mesajı da gönder (daha görünür olsun)
-    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(
-        "🔊 DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE 🔊", 
-        "All"
-    )
+    -- Chat mesajı
+    pcall(function()
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(
+            "🔊 DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE 🔊", 
+            "All"
+        )
+    end)
+    
+    -- Sonraki ses için index değiştir
+    CurrentSoundIndex = CurrentSoundIndex % #SoundIds + 1
+    
+    print("[SOUND] Çalındı! ID: " .. SoundIds[CurrentSoundIndex])
+end
+
+-- Test sesi (kendi client'ında çal)
+local function TestSound()
+    local char = LocalPlayer.Character
+    if char then
+        local head = char:FindFirstChild("Head")
+        if head then
+            local sound = Instance.new("Sound")
+            sound.SoundId = SoundIds[CurrentSoundIndex]
+            sound.Volume = 10
+            sound.Parent = head
+            sound:Play()
+            game:GetService("Debris"):AddItem(sound, 5)
+            print("[TEST] Ses çalındı: " .. SoundIds[CurrentSoundIndex])
+        end
+    end
 end
 
 function StartFly()
@@ -272,7 +316,6 @@ function StopNoClip()
     print("[NOCLIP] Kapandı")
 end
 
--- FIX: Modern Raycast API kullanımı
 local function IsVisible(targetPart, ignoreList)
     local origin = Camera.CFrame.Position
     local direction = (targetPart.Position - origin)
@@ -863,22 +906,35 @@ local function BuildCategory(cat)
         KeybindRow("TeamCheck", "Team Check")
         KeybindRow("SoundHack", "Sound Hack")
     elseif cat == "SOUND" then
-        Section("🔊 SOUND HACK")
+        Section("🔊 SOUND HACK - FIXED")
         Toggle("Sound Hack", Features.SoundHack.state, function(v) 
             Features.SoundHack.state = v
             if v then
                 PlayServerSound()
-                print("[SOUND] Server-side ses çalındı!")
             else
                 print("[SOUND] Kapandı")
             end
         end)
         
+        Section("TEST")
+        Button("🔊 TEST SESİ ÇAL (Kendi Client'ında)", function()
+            TestSound()
+        end)
+        
+        Section("SES SEÇ")
+        for i, id in ipairs(SoundIds) do
+            Button("Ses #" .. i .. " - " .. id:gsub("rbxassetid://", ""), function()
+                CurrentSoundIndex = i
+                print("[SOUND] Seçildi: " .. id)
+                TestSound()
+            end)
+        end
+        
         Section("BİLGİ")
         local infoLabel = Instance.new("TextLabel", Scroll)
-        infoLabel.Size = UDim2.new(1, -10, 0, 120)
+        infoLabel.Size = UDim2.new(1, -10, 0, 150)
         infoLabel.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        infoLabel.Text = "🔊 SOUND HACK AKTİF OLDUĞUNDA:\n\n• Tüm oyunculara ses çalar\n• 'DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE' duyulur\n• Chat mesajı gönderilir\n• Herkes duyar!\n\n⚠️ DİKKATLİ KULLAN!"
+        infoLabel.Text = "🔊 SOUND HACK NASIL ÇALIŞIR:\n\n1. Önce TEST SESİ ÇAL butonuna bas\n2. Ses duyuyorsan, SOUND HACK'i aç\n3. Duymuyorsan farklı ses ID'si dene\n\n⚠️ Bazı sesler Roblox tarafından silinmiş olabilir!\n⚠️ Her oyun farklı seslere izin verir!\n\n💡 ÇÖZÜM: Kendi ses ID'lerini ekle!"
         infoLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
         infoLabel.Font = Enum.Font.Gotham
         infoLabel.TextSize = 13
@@ -886,11 +942,6 @@ local function BuildCategory(cat)
         infoLabel.TextYAlignment = Enum.TextYAlignment.Top
         infoLabel.TextWrapped = true
         Instance.new("UICorner", infoLabel).CornerRadius = UDim.new(0, 10)
-        
-        Section("MANUEL ÇALDIR")
-        Button("🔊 ŞİMDİ ÇALDIR", function()
-            PlayServerSound()
-        end)
     elseif cat == "UTILITY" then
         Section("TELEPORT")
         local targetDD = Instance.new("Frame", Scroll)
@@ -1008,49 +1059,39 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v13 GUIDE
+          VISITING v14 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[NEW IN v13]
-🔊 SOUND HACK KATEGORİSİ EKLENDİ!
-• Server-side ses çalma
-• Herkes duyar
-• Chat mesajı ile birlikte
+[NEW IN v14]
+🔊 SOUND HACK DÜZELTİLDİ!
+• 6 farklı ses ID'si eklendi
+• Test butonu eklendi
+• Ses seçme butonları
 
-[FIXES IN v12]
+[SOUND HACK NASIL KULLANILIR]
+1. SOUND kategorisine git
+2. TEST SESİ ÇAL butonuna bas
+3. Ses duyuyorsan → Sound Hack ON yap
+4. Ses duymuyorsan → farklı ses ID'si dene
+
+⚠️ ÖNEMLİ: Bazı sesler Roblox'ta silinmiş olabilir!
+Eğer hiçbir ses çalışmıyorsa, kendi ses ID'lerini ekle.
+
+[KENDİ SESİNİ EKLEMEK]
+SoundIds table'ına yeni ID ekle:
+"rbxassetid://SENIN_ID_BURAYA"
+
+[FIXES IN v12-13]
 ✓ States variable undefined error fixed
 ✓ ResetAll now defined before use
 ✓ Ray.new → Workspace:Raycast (modern API)
 ✓ Spinbot no longer breaks movement
 ✓ Fly works after respawn
 ✓ ESP performance improved (throttled)
-✓ CoreGui fallback for executors
-
-[HOTKEYS]
-All keybinds configurable in HOTKEYS tab
-Supports Toggle and Hold modes
-
-[MOVEMENT]
-Fly       → W/A/S/D move, Space up, Shift down
-NoClip    → Walk through walls
-Walk Speed→ Adjustable running speed
-
-[AIMBOT]
-Aimbot    → Auto-aim with wall check
-Silent Aim→ Smooth aim without snap
-FOV       → Aim field of view (drawable)
-Magic Bullet→ Homing projectiles
-
-[ESP]
-Box, Name, Skeleton, Tracer, Color
-
-[SOUND HACK]
-🔊 Sound Hack → Server-side ses çalar
-  "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE"
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -1132,7 +1173,7 @@ local function ToggleFeature(name)
         feature.state = not feature.state
         if feature.state then
             PlayServerSound()
-            print("[SOUND HACK] Aktif - Ses çalındı!")
+            print("[SOUND HACK] Aktif!")
         else
             print("[SOUND HACK] Kapandı")
         end
@@ -1244,7 +1285,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v13 | SOUND HACK | INSERT | END"
+splash.Text = "VISITING v14 | SOUND FIXED | INSERT | END"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1254,6 +1295,6 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v13 YÜKLENDİ ===")
-print("YENİ: Sound Hack kategorisi eklendi!")
-print("FIXED: States, ResetAll, Raycast API, Spinbot, ESP perf")
+print("=== VISITING v14 YÜKLENDİ ===")
+print("YENİ: 6 farklı ses ID'si + Test butonu!")
+print("SOUND kategorisinden test edebilirsin.")
