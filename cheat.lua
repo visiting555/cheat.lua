@@ -1,4 +1,4 @@
--- VISITING v15 - SOUND HACK (ÇALIŞAN)
+-- VISITING v15 - SCREEN HACK
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -6,7 +6,6 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
@@ -16,7 +15,6 @@ ScreenGui.Name = "VS_V15"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
--- ANA MENÜ
 local Main = Instance.new("Frame")
 Main.Size = UDim2.new(0, 680, 0, 760)
 Main.Position = UDim2.new(0.5, -340, 0.02, 0)
@@ -90,7 +88,6 @@ Instance.new("UICorner", RightPanel).CornerRadius = UDim.new(0, 0)
 
 _G.Dropdowns = {}
 
--- ÖZELLİKLER
 local Features = {
     Fly = {state = false, speed = 60, key = Enum.KeyCode.F1, mode = "Toggle"},
     NoClip = {state = false, key = Enum.KeyCode.F2, mode = "Toggle"},
@@ -102,7 +99,7 @@ local Features = {
     DrawFOV = {state = false, key = Enum.KeyCode.F8, mode = "Toggle"},
     TeamCheck = {state = false, key = Enum.KeyCode.F9, mode = "Toggle"},
     AntiAFK = {state = false},
-    SoundLoop = {state = false, key = Enum.KeyCode.F10, mode = "Toggle"}
+    ScreenHack = {state = false, key = Enum.KeyCode.F10, mode = "Toggle"}
 }
 
 local Connections = {}
@@ -112,96 +109,67 @@ local FOVCircle = nil
 local Holding = {}
 local WalkSpeed = 16
 local FOVValue = 70
-local SoundLoopConnection = nil
-local SoundText = nil
+local ScreenLoopConnection = nil
+local ScreenRemote = nil
+local RemoteFound = false
 
--- SES VE EKRAN BİLDİRİMİ
-local function PlayVisitingSound()
-    local soundId = "rbxassetid://1847652744" -- Roblox teması (çalışıyor)
-    
-    -- EKRANDA BÜYÜK YAZI GÖSTER
-    if SoundText then SoundText:Destroy() end
-    SoundText = Instance.new("TextLabel", ScreenGui)
-    SoundText.Size = UDim2.new(1, 0, 0.3, 0)
-    SoundText.Position = UDim2.new(0, 0, 0.35, 0)
-    SoundText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    SoundText.BackgroundTransparency = 0.3
-    SoundText.Text = "DÜNYANIN EN İYİ HİLESİ\nVISITING SOFTWARE"
-    SoundText.TextColor3 = Color3.fromRGB(0, 200, 255)
-    SoundText.Font = Enum.Font.GothamBlack
-    SoundText.TextSize = 50
-    SoundText.TextScaled = true
-    SoundText.TextWrapped = true
-    SoundText.TextXAlignment = Enum.TextXAlignment.Center
-    SoundText.TextYAlignment = Enum.TextYAlignment.Center
-    SoundText.ZIndex = 999
-    Instance.new("UICorner", SoundText).CornerRadius = UDim.new(0, 16)
-    
-    -- YAZIYI YANIP SÖNDÜR
-    local tween1 = TweenService:Create(SoundText, TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
-        TextColor3 = Color3.fromRGB(255, 255, 255)
-    })
-    local tween2 = TweenService:Create(SoundText, TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
-        TextColor3 = Color3.fromRGB(0, 200, 255)
-    })
-    local count = 0
-    local tweenConn
-    tweenConn = RunService.RenderStepped:Connect(function()
-        count = count + 1
-        if count % 30 == 0 then
-            tween1:Play()
-        elseif count % 30 == 15 then
-            tween2:Play()
+local function GetPlayerNames()
+    local names = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then table.insert(names, p.Name) end
+    end
+    if #names == 0 then table.insert(names, "No Players") end
+    return names
+end
+
+local function GetPlayerByName(name)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Name:lower() == name:lower() then return p end
+    end
+    return nil
+end
+
+local function UpdateAllDropdowns()
+    local names = GetPlayerNames()
+    for _, dd in ipairs(_G.Dropdowns) do
+        if type(dd) == "function" then pcall(dd, names) end
+    end
+end
+
+Players.PlayerAdded:Connect(function() task.wait(0.5) UpdateAllDropdowns() end)
+Players.PlayerRemoving:Connect(function() task.wait(0.5) UpdateAllDropdowns() end)
+
+local function FindSpinRemote()
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            local n = v.Name:lower()
+            if n:find("spin") or n:find("rotate") or n:find("character") or n:find("update") then
+                return v
+            end
         end
-        if count > 120 then
-            tweenConn:Disconnect()
-            SoundText:Destroy()
-            SoundText = nil
+    end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") then return v end
+    end
+    return nil
+end
+local SpinRemote = FindSpinRemote()
+
+function FindScreenRemote()
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            local n = v.Name:lower()
+            if n:find("screen") or n:find("message") or n:find("broadcast") or n:find("chat") or n:find("announce") or n:find("gui") or n:find("notification") or n:find("display") then
+                return v
+            end
         end
-    end)
-    
-    -- SES ÇAL
-    local sound = Instance.new("Sound", Workspace)
-    sound.SoundId = soundId
-    sound.Volume = 5
-    sound.Parent = Workspace
-    sound:Play()
-    print("[SOUND] Çalındı: " .. soundId)
-    
-    -- ECHO EFEKTİ
-    task.delay(0.5, function()
-        local sound2 = Instance.new("Sound", Workspace)
-        sound2.SoundId = soundId
-        sound2.Volume = 3
-        sound2.Parent = Workspace
-        sound2:Play()
-        task.delay(2, function()
-            sound2:Destroy()
-        end)
-    end)
-    
-    task.delay(4, function()
-        sound:Destroy()
-    end)
+    end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") then return v end
+    end
+    return nil
 end
 
-function StartSoundLoop()
-    if SoundLoopConnection then SoundLoopConnection:Disconnect() end
-    SoundLoopConnection = RunService.RenderStepped:Connect(function()
-        if not Features.SoundLoop.state then return end
-        PlayVisitingSound()
-        task.wait(5)
-    end)
-    print("[SOUND LOOP] Aktif")
-end
-
-function StopSoundLoop()
-    if SoundLoopConnection then SoundLoopConnection:Disconnect(); SoundLoopConnection = nil end
-    if SoundText then SoundText:Destroy(); SoundText = nil end
-    print("[SOUND LOOP] Kapandı")
-end
-
--- DİĞER FONKSİYONLAR (KISALTILMIŞ, ÖNCEKİ VERSİYONLARLA AYNI)
 function StartFly()
     if Connections.Fly then Connections.Fly:Disconnect(); Connections.Fly = nil end
     local char = LocalPlayer.Character
@@ -388,10 +356,6 @@ end
 
 function StartSpinbot()
     if Connections.Spinbot then Connections.Spinbot:Disconnect(); Connections.Spinbot = nil end
-    local SpinRemote = nil
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") and v.Name:lower():find("spin") then SpinRemote = v break end
-    end
     Connections.Spinbot = RunService.RenderStepped:Connect(function()
         if not Features.Spinbot.state then return end
         SpinAngle = (SpinAngle + Features.Spinbot.speed * 3.5) % 360
@@ -408,7 +372,7 @@ function StartSpinbot()
             end
         end
     end)
-    print("[SPINBOT] Aktif")
+    print("[SPINBOT] Aktif" .. (SpinRemote and " (Server-side)" or " (Client-side)"))
 end
 
 function StopSpinbot()
@@ -633,7 +597,53 @@ function DrawFOVCircle()
     end)
 end
 
--- MENÜ OLUŞTURMA
+-- SCREEN HACK FONKSİYONLARI
+function StartScreenHack()
+    if ScreenLoopConnection then ScreenLoopConnection:Disconnect() end
+    ScreenRemote = FindScreenRemote()
+    if ScreenRemote then
+        RemoteFound = true
+        print("[SCREEN] RemoteEvent tespit edildi: " .. ScreenRemote.Name)
+    else
+        RemoteFound = false
+        print("[SCREEN] RemoteEvent bulunamadı, client-side çalışacak.")
+    end
+    ScreenLoopConnection = RunService.RenderStepped:Connect(function()
+        if not Features.ScreenHack.state then return end
+        local msg = "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE"
+        if ScreenRemote then
+            pcall(function()
+                ScreenRemote:FireServer(msg)
+                print("[SCREEN] FireServer gönderildi: " .. msg)
+            end)
+        else
+            pcall(function()
+                local notif = Instance.new("TextLabel")
+                notif.Size = UDim2.new(1, 0, 0.2, 0)
+                notif.Position = UDim2.new(0, 0, 0.4, 0)
+                notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                notif.BackgroundTransparency = 0.3
+                notif.Text = msg
+                notif.TextColor3 = Color3.fromRGB(255, 255, 0)
+                notif.Font = Enum.Font.GothamBlack
+                notif.TextSize = 60
+                notif.TextScaled = true
+                notif.Parent = ScreenGui
+                notif.ZIndex = 999
+                task.delay(2, function() notif:Destroy() end)
+                print("[SCREEN] Client-side mesaj gösterildi (sadece sen görürsün).")
+            end)
+        end
+        task.wait(3)
+    end)
+    print("[SCREEN HACK] Aktif")
+end
+
+function StopScreenHack()
+    if ScreenLoopConnection then ScreenLoopConnection:Disconnect(); ScreenLoopConnection = nil end
+    print("[SCREEN HACK] Kapandı")
+end
+
 local function ClearRight()
     for _, v in ipairs(RightPanel:GetChildren()) do
         if v:IsA("ScrollingFrame") then v:Destroy() end
@@ -904,26 +914,59 @@ local function BuildCategory(cat)
             colorBtn.BackgroundColor3 = colors[idx]
             Features.ESP.color = colors[idx]
         end)
-    elseif cat == "SOUND" then
-        Section("SOUND HACK - CLIENT SIDE")
-        Toggle("Loop Sound", Features.SoundLoop.state, function(v)
-            Features.SoundLoop.state = v
-            if v then StartSoundLoop() else StopSoundLoop() end
+    elseif cat == "SCREEN" then
+        Section("SCREEN HACK")
+        Toggle("Screen Hack", Features.ScreenHack.state, function(v)
+            Features.ScreenHack.state = v
+            if v then StartScreenHack() else StopScreenHack() end
         end)
-        Button("Play Sound Once", function()
-            PlayVisitingSound()
+        Button("Find RemoteEvent", function()
+            local rem = FindScreenRemote()
+            if rem then
+                print("[SCREEN] RemoteEvent tespit edildi: " .. rem.Name)
+                ScreenRemote = rem
+                RemoteFound = true
+            else
+                print("[SCREEN] RemoteEvent bulunamadı! (Client-side modda)")
+                RemoteFound = false
+                ScreenRemote = nil
+            end
         end)
-        local info = Instance.new("TextLabel", Scroll)
-        info.Size = UDim2.new(1, -10, 0, 60)
-        info.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        info.Text = "Sadece SEN duyarsın.\nEkranda büyük yazı ile 'DÜNYANIN EN İYİ HİLESİ VISITING SOFTWARE' yazar.\nEcho efekti ile yankılanır."
-        info.TextColor3 = Color3.fromRGB(200, 200, 210)
-        info.Font = Enum.Font.Gotham
-        info.TextSize = 12
-        info.TextXAlignment = Enum.TextXAlignment.Left
-        info.TextYAlignment = Enum.TextYAlignment.Top
-        info.TextWrapped = true
-        Instance.new("UICorner", info).CornerRadius = UDim.new(0, 10)
+        local infoText = Instance.new("TextLabel", Scroll)
+        infoText.Size = UDim2.new(1, -10, 0, 80)
+        infoText.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
+        infoText.Text = "RemoteEvent aranıyor...\nBulunursa FireServer ile mesaj gönderilir (sunucu işlemezse kimse görmez).\nBulunamazsa client-side mesaj gösterilir (sadece sen görürsün)."
+        infoText.TextColor3 = Color3.fromRGB(200, 200, 210)
+        infoText.Font = Enum.Font.Gotham
+        infoText.TextSize = 12
+        infoText.TextXAlignment = Enum.TextXAlignment.Left
+        infoText.TextYAlignment = Enum.TextYAlignment.Top
+        infoText.TextWrapped = true
+        Instance.new("UICorner", infoText).CornerRadius = UDim.new(0, 10)
+        Button("Test Mesajı", function()
+            local msg = "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE"
+            if ScreenRemote then
+                pcall(function()
+                    ScreenRemote:FireServer(msg)
+                    print("[SCREEN] Test FireServer gönderildi: " .. msg)
+                end)
+            else
+                local notif = Instance.new("TextLabel")
+                notif.Size = UDim2.new(1, 0, 0.2, 0)
+                notif.Position = UDim2.new(0, 0, 0.4, 0)
+                notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                notif.BackgroundTransparency = 0.3
+                notif.Text = msg
+                notif.TextColor3 = Color3.fromRGB(255, 255, 0)
+                notif.Font = Enum.Font.GothamBlack
+                notif.TextSize = 60
+                notif.TextScaled = true
+                notif.Parent = ScreenGui
+                notif.ZIndex = 999
+                task.delay(3, function() notif:Destroy() end)
+                print("[SCREEN] Client-side test mesajı gösterildi.")
+            end
+        end)
     elseif cat == "HOTKEYS" then
         Section("HOTKEYS")
         KeybindRow("Fly", "Fly")
@@ -935,7 +978,7 @@ local function BuildCategory(cat)
         KeybindRow("ESP", "ESP")
         KeybindRow("DrawFOV", "Draw FOV")
         KeybindRow("TeamCheck", "Team Check")
-        KeybindRow("SoundLoop", "Sound Loop")
+        KeybindRow("ScreenHack", "Screen Hack")
     elseif cat == "CONFIG" then
         Section("CONFIG")
         Button("Save Config", function()
@@ -1109,26 +1152,21 @@ local function BuildCategory(cat)
           VISITING v15 GUIDE
 ═══════════════════════════════════════
 
+[SCREEN HACK - YENİ!]
+RemoteEvent arar (screen, message, broadcast, chat, announce, gui).
+Bulursa: FireServer ile "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE" gönderir.
+Bulamazsa: Client-side mesaj gösterir (sadece sen görürsün).
+Test Mesajı butonu ile dene.
+
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[SOUND HACK]
-Sadece SEN duyarsın. Ekranda büyük yazı ile mesaj gösterir.
-Loop ile sürekli çalabilir. Echo efekti ile yankılanır.
-
-[AIMBOT vs SILENT AIM]
-Aimbot: Kamera hedefe doğru hareket eder (FOV içinde)
-Silent Aim: Kamera oynamaz, mermi hedefin kafasına gider
-
-[SPINBOT]
-Sadece Y ekseninde döner, fly'ı bozmaz.
-
-[HOTKEYS]
-Tüm tuş atamaları ve Hold/Toggle modları orada.
+[HOTKEYS KATEGORİSİ]
+Tüm tuş atamaları ve Hold/Toggle modları.
 
 [CONFIG]
-Save/Load ile ayarlar kaydedilir.
+Save/Load ayarları.
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -1136,7 +1174,7 @@ Save/Load ile ayarlar kaydedilir.
 ═══════════════════════════════════════
 ]]
         local g = Instance.new("TextLabel", Scroll)
-        g.Size = UDim2.new(1, -10, 0, 580)
+        g.Size = UDim2.new(1, -10, 0, 450)
         g.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
         g.Text = guideText
         g.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -1151,7 +1189,7 @@ Save/Load ile ayarlar kaydedilir.
     Scroll.CanvasSize = UDim2.new(0, 0, 0, #Scroll:GetChildren() * 52 + 100)
 end
 
-local Categories = {"MOVEMENT", "AIMBOT", "ESP", "SOUND", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
+local Categories = {"MOVEMENT", "AIMBOT", "ESP", "SCREEN", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
 local CatButtons = {}
 
 for i, cat in ipairs(Categories) do
@@ -1206,9 +1244,9 @@ local function ToggleFeature(name)
     elseif name == "TeamCheck" then
         feature.state = not feature.state
         print("[TEAM CHECK] " .. tostring(feature.state))
-    elseif name == "SoundLoop" then
+    elseif name == "ScreenHack" then
         feature.state = not feature.state
-        if feature.state then StartSoundLoop() else StopSoundLoop() end
+        if feature.state then StartScreenHack() else StopScreenHack() end
     end
 end
 
@@ -1243,9 +1281,9 @@ local function SetFeatureState(name, state)
     elseif name == "TeamCheck" then
         feature.state = state
         print("[TEAM CHECK] " .. tostring(state))
-    elseif name == "SoundLoop" then
+    elseif name == "ScreenHack" then
         feature.state = state
-        if state then StartSoundLoop() else StopSoundLoop() end
+        if state then StartScreenHack() else StopScreenHack() end
     end
 end
 
@@ -1299,8 +1337,8 @@ local function ResetAll()
                 if Connections.FOVCircle then Connections.FOVCircle:Disconnect(); Connections.FOVCircle = nil end
             elseif name == "AntiAFK" then
                 if Connections.AFK then Connections.AFK:Disconnect(); Connections.AFK = nil end
-            elseif name == "SoundLoop" then
-                StopSoundLoop()
+            elseif name == "ScreenHack" then
+                StopScreenHack()
             end
         end
     end
@@ -1312,7 +1350,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v15 | INSERT | END | SOUND HAZIR"
+splash.Text = "VISITING v15 | INSERT | END | SCREEN HACK"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1323,6 +1361,6 @@ task.delay(5, function() splash:Destroy() end)
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
 print("=== VISITING v15 YÜKLENDİ ===")
-print("SOUND HACK: Sadece sen duyarsın, ekranda devasa yazı çıkar.")
-print("Loop ile sürekli çalabilirsin.")
-print("Echo efekti ile yankılanır.")
+print("SCREEN HACK kategorisi eklendi.")
+print("RemoteEvent aranacak, bulunursa FireServer gönderilecek.")
+print("Bulunamazsa client-side mesaj gösterilecek.")
