@@ -1,17 +1,16 @@
--- VISITING v13 - FINAL FIXED
+-- VISITING v11 - COMPLETE + HOTKEYS + FIXES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V13"
+ScreenGui.Name = "VS_V11"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
@@ -56,7 +55,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v13"
+Txt.Text = "VISITING v11"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -106,8 +105,6 @@ local ESPObjects = {}
 local SpinAngle = 0
 local FOVCircle = nil
 local Holding = {}
-local WalkSpeed = 16
-local FOVValue = 70
 
 local function GetPlayerNames()
     local names = {}
@@ -226,44 +223,41 @@ function StopNoClip()
     print("[NOCLIP] Kapandı")
 end
 
-local function GetTarget()
-    local closest, dist = nil, Features.Aimbot.fov
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myPos then return nil end
-    local myTeam = LocalPlayer.Team
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p == LocalPlayer or not p.Character then continue end
-        if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
-        local head = p.Character:FindFirstChild("Head")
-        if not head then continue end
-        local pos, on = Camera:WorldToViewportPoint(head.Position)
-        if not on then continue end
-        local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-        if d > dist then continue end
-        local distance = (myPos.Position - head.Position).Magnitude
-        if distance > Features.Aimbot.maxDist then continue end
-        local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * distance)
-        local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
-        if hit and not hit:IsDescendantOf(p.Character) then continue end
-        dist = d
-        closest = p
-    end
-    return closest
-end
-
 function StartAimbot()
     if Connections.Aimbot then Connections.Aimbot:Disconnect(); Connections.Aimbot = nil end
     Connections.Aimbot = RunService.RenderStepped:Connect(function()
         if not Features.Aimbot.state then return end
-        local target = GetTarget()
-        if target and target.Character then
-            local head = target.Character.Head
-            if head then
-                local targetCF = CFrame.new(Camera.CFrame.Position, head.Position)
+        local closest, dist = nil, Features.Aimbot.fov
+        local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+        local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not myPos then return end
+        local myTeam = LocalPlayer.Team
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p == LocalPlayer or not p.Character then continue end
+            if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
+            local head = p.Character:FindFirstChild("Head")
+            if not head then continue end
+            local pos, on = Camera:WorldToViewportPoint(head.Position)
+            if not on then continue end
+            local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+            if d > dist then continue end
+            local distance = (myPos.Position - head.Position).Magnitude
+            if distance > Features.Aimbot.maxDist then continue end
+            local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * distance)
+            local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
+            if hit and not hit:IsDescendantOf(p.Character) then continue end
+            dist = d
+            closest = p
+        end
+        if closest and closest.Character then
+            local head = closest.Character.Head
+            local targetCF = CFrame.new(Camera.CFrame.Position, head.Position)
+            if Features.SilentAim.state then
                 local current = Camera.CFrame
                 local new = current:Lerp(targetCF, Features.Aimbot.smooth)
                 Camera.CFrame = new
+            else
+                Camera.CFrame = targetCF
             end
         end
     end)
@@ -273,29 +267,6 @@ end
 function StopAimbot()
     if Connections.Aimbot then Connections.Aimbot:Disconnect(); Connections.Aimbot = nil end
     print("[AIMBOT] Kapandı")
-end
-
-function StartSilentAim()
-    if Connections.SilentAim then Connections.SilentAim:Disconnect(); Connections.SilentAim = nil end
-    Connections.SilentAim = RunService.RenderStepped:Connect(function()
-        if not Features.SilentAim.state then return end
-        local target = GetTarget()
-        if target and target.Character then
-            local head = target.Character.Head
-            if head then
-                local targetCF = CFrame.new(Camera.CFrame.Position, head.Position)
-                local current = Camera.CFrame
-                local new = current:Lerp(targetCF, Features.Aimbot.smooth)
-                Camera.CFrame = new
-            end
-        end
-    end)
-    print("[SILENT AIM] Aktif")
-end
-
-function StopSilentAim()
-    if Connections.SilentAim then Connections.SilentAim:Disconnect(); Connections.SilentAim = nil end
-    print("[SILENT AIM] Kapandı")
 end
 
 function StartSpinbot()
@@ -333,10 +304,6 @@ function StartMagicBullet()
         local char = LocalPlayer.Character
         if not char then return end
         local now = tick()
-        local myTeam = LocalPlayer.Team
-        local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-        local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not myPos then return end
         for _, obj in ipairs(Workspace:GetChildren()) do
             for _, child in ipairs(obj:GetDescendants()) do
                 if child:IsA("BasePart") and child.Velocity.Magnitude > 20 then
@@ -344,24 +311,17 @@ function StartMagicBullet()
                     if n:find("bullet") or n:find("projectile") or n:find("shell") or n:find("rocket") or n:find("missile") or n:find("arrow") then
                         if not cache[child] or cache[child] < now - 0.3 then
                             cache[child] = now
-                            local closest, dist = nil, Features.Aimbot.fov
+                            local closest, dist = nil, 400
+                            local myTeam = LocalPlayer.Team
                             for _, p in ipairs(Players:GetPlayers()) do
                                 if p == LocalPlayer or not p.Character then continue end
                                 if Features.TeamCheck.state and myTeam and p.Team and myTeam == p.Team then continue end
                                 local head = p.Character:FindFirstChild("Head")
                                 if head then
-                                    local pos, on = Camera:WorldToViewportPoint(head.Position)
-                                    if on then
-                                        local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                                        if d < dist then
-                                            local distance = (myPos.Position - head.Position).Magnitude
-                                            if distance > Features.Aimbot.maxDist then continue end
-                                            local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * distance)
-                                            local hit = Workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                                            if hit and not hit:IsDescendantOf(p.Character) then continue end
-                                            dist = d
-                                            closest = p
-                                        end
+                                    local d = (head.Position - child.Position).Magnitude
+                                    if d < dist then
+                                        dist = d
+                                        closest = p
                                     end
                                 end
                             end
@@ -766,11 +726,12 @@ local function BuildCategory(cat)
         Section("NOCLIP")
         Toggle("NoClip", Features.NoClip.state, function(v) Features.NoClip.state = v; if v then StartNoClip() else StopNoClip() end end)
         Section("WALK")
-        Slider("Walk Speed", 16, 500, WalkSpeed, function(v) WalkSpeed = v; if LocalPlayer.Character then local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = v end end end)
+        local walkSpeed = 16
+        Slider("Walk Speed", 16, 500, walkSpeed, function(v) walkSpeed = v; if LocalPlayer.Character then local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = v end end end)
     elseif cat == "AIMBOT" then
         Section("AIMBOT")
         Toggle("Aimbot", Features.Aimbot.state, function(v) Features.Aimbot.state = v; if v then StartAimbot() else StopAimbot() end end)
-        Toggle("Silent Aim", Features.SilentAim.state, function(v) Features.SilentAim.state = v; if v then StartSilentAim() else StopSilentAim() end end)
+        Toggle("Silent Aim", Features.SilentAim.state, function(v) Features.SilentAim.state = v end)
         Toggle("Team Check", Features.TeamCheck.state, function(v) Features.TeamCheck.state = v end)
         Slider("Aimbot FOV", 30, 300, Features.Aimbot.fov, function(v) Features.Aimbot.fov = v end)
         Slider("Aimbot Smooth", 1, 100, Features.Aimbot.smooth * 100, function(v) Features.Aimbot.smooth = v / 100 end)
@@ -828,58 +789,6 @@ local function BuildCategory(cat)
         KeybindRow("ESP", "ESP")
         KeybindRow("DrawFOV", "Draw FOV")
         KeybindRow("TeamCheck", "Team Check")
-    elseif cat == "CONFIG" then
-        Section("CONFIG")
-        Button("Save Config", function()
-            local success, err = pcall(function()
-                local config = {
-                    Features = Features,
-                    WalkSpeed = WalkSpeed,
-                    FOV = FOVValue
-                }
-                local json = HttpService:JSONEncode(config)
-                if writefile then
-                    writefile("vs_config.json", json)
-                    print("[CONFIG] Kaydedildi!")
-                else
-                    print("[CONFIG] writefile desteklenmiyor.")
-                end
-            end)
-            if not success then print("[CONFIG] Kaydetme hatası: " .. tostring(err)) end
-        end)
-        Button("Load Config", function()
-            local success, err = pcall(function()
-                if readfile then
-                    local data = readfile("vs_config.json")
-                    if data and data ~= "" then
-                        local config = HttpService:JSONDecode(data)
-                        if config.Features then
-                            for name, f in pairs(config.Features) do
-                                if Features[name] then
-                                    for k, v in pairs(f) do
-                                        if k == "key" and type(v) == "string" then
-                                            local enum = Enum.KeyCode[v] or Enum.UserInputType[v]
-                                            if enum then Features[name][k] = enum end
-                                        elseif k == "color" and type(v) == "table" then
-                                            Features[name][k] = Color3.fromRGB(v.R*255, v.G*255, v.B*255)
-                                        else
-                                            Features[name][k] = v
-                                        end
-                                    end
-                                end
-                            end
-                            if config.WalkSpeed then WalkSpeed = config.WalkSpeed end
-                            if config.FOV then FOVValue = config.FOV; Camera.FieldOfView = FOVValue end
-                            print("[CONFIG] Yüklendi!")
-                            UpdateAllDropdowns()
-                        end
-                    end
-                else
-                    print("[CONFIG] readfile desteklenmiyor.")
-                end
-            end)
-            if not success then print("[CONFIG] Yükleme hatası: " .. tostring(err)) end
-        end)
     elseif cat == "UTILITY" then
         Section("TELEPORT")
         local targetDD = Instance.new("Frame", Scroll)
@@ -967,7 +876,7 @@ local function BuildCategory(cat)
             end
         end)
         Section("FOV")
-        Slider("FOV Changer", 30, 120, FOVValue, function(v) FOVValue = v; Camera.FieldOfView = v end)
+        Slider("FOV Changer", 30, 120, 70, function(v) Camera.FieldOfView = v end)
         Section("UTILITY")
         Toggle("Anti AFK", Features.AntiAFK.state, function(v)
             Features.AntiAFK.state = v
@@ -998,7 +907,7 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v13 GUIDE
+          VISITING v11 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
@@ -1009,10 +918,6 @@ END     → Emergency Stop (All Off)
 Tüm tuş atamaları ve Hold/Toggle modları
 "HOTKEYS" bölümünden ayarlanabilir.
 
-[CONFIG KATEGORİSİ]
-Save Config → Tüm ayarları kaydeder
-Load Config → Kaydedilmiş ayarları yükler
-
 [MOVEMENT]
 Fly       → W/A/S/D move, Space up, Shift down
 NoClip    → Walk through walls
@@ -1020,14 +925,14 @@ Walk Speed→ Adjust running speed
 
 [AIMBOT]
 Aimbot    → Auto-aim with wall check, Team Check, Max Distance
-Silent Aim→ Head lock WITHOUT Aimbot (works independently)
+Silent Aim→ Bullets go to head without camera shake
 FOV       → Aim field of view (drawable)
 Smooth    → Aim smoothness
-Magic Bullet→ Projectiles homing to target (FOV based)
+Magic Bullet→ Projectiles homing to target
 
 [SPINBOT]
-Spinbot   → Character spins (does not affect fly)
-Spin Speed→ Rotation speed
+Spinbot   → Character spins (SERVER-SIDE via RemoteEvent)
+Spin Speed→ Rotation speed (doesn't affect fly)
 
 [ESP]
 Box, Name, Skeleton, Tracer, Color
@@ -1062,7 +967,7 @@ Anti AFK, Kill Target
     Scroll.CanvasSize = UDim2.new(0, 0, 0, #Scroll:GetChildren() * 52 + 100)
 end
 
-local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "CONFIG", "UTILITY", "GUIDE"}
+local Categories = {"MOVEMENT", "AIMBOT", "ESP", "HOTKEYS", "UTILITY", "GUIDE"}
 local CatButtons = {}
 
 for i, cat in ipairs(Categories) do
@@ -1101,7 +1006,7 @@ local function ToggleFeature(name)
         if feature.state then StartAimbot() else StopAimbot() end
     elseif name == "SilentAim" then
         feature.state = not feature.state
-        if feature.state then StartSilentAim() else StopSilentAim() end
+        print("[SILENT AIM] " .. tostring(feature.state))
     elseif name == "Spinbot" then
         feature.state = not feature.state
         if feature.state then StartSpinbot() else StopSpinbot() end
@@ -1135,7 +1040,7 @@ local function SetFeatureState(name, state)
         if state then StartAimbot() else StopAimbot() end
     elseif name == "SilentAim" then
         feature.state = state
-        if state then StartSilentAim() else StopSilentAim() end
+        print("[SILENT AIM] " .. tostring(state))
     elseif name == "Spinbot" then
         feature.state = state
         if state then StartSpinbot() else StopSpinbot() end
@@ -1195,7 +1100,6 @@ local function ResetAll()
             if name == "Fly" then StopFly()
             elseif name == "NoClip" then StopNoClip()
             elseif name == "Aimbot" then StopAimbot()
-            elseif name == "SilentAim" then StopSilentAim()
             elseif name == "Spinbot" then StopSpinbot()
             elseif name == "ESP" then StopESP()
             elseif name == "MagicBullet" then StopMagicBullet()
@@ -1215,7 +1119,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v13 | INSERT | END | Silent Aim Fixed"
+splash.Text = "VISITING v11 | INSERT | END | HOTKEYS Kategorisi Eklendi"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1225,8 +1129,7 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v13 YÜKLENDİ ===")
-print("Silent Aim bağımsız çalışır (Aimbot gerekmez)")
-print("Aimbot ve Silent Aim aynı FOV kullanır")
-print("Magic Bullet FOV + TeamCheck + MaxDistance kullanır")
-print("Spinbot eski haline döndü")
+print("=== VISITING v11 YÜKLENDİ ===")
+print("Team Check, Max Distance, FOV düzeltildi.")
+print("Spinbot fly'ı bozmaz (sadece Y ekseninde döner).")
+print("HOTKEYS kategorisi eklendi - tüm tuş atamaları orada.")
