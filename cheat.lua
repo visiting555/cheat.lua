@@ -1152,18 +1152,20 @@ local function BuildCategory(cat)
           VISITING v15 GUIDE
 ═══════════════════════════════════════
 
-[SCREEN HACK - YENİ!]
-RemoteEvent arar (screen, message, broadcast, chat, announce, gui).
-Bulursa: FireServer ile "DÜNYANIN EN İYİ HİLESİ VİSİTİNG SOFTWARE" gönderir.
-Bulamazsa: Client-side mesaj gösterir (sadece sen görürsün).
-Test Mesajı butonu ile dene.
+[SCREEN HACK]
+- "Find RemoteEvent" butonuna tıkla (1 kere yeter).
+- Konsoldan (F9) sonucu kontrol et.
+- RemoteEvent bulunursa FireServer gönderir.
+- Bulunamazsa client-side mesaj gösterir.
+- "Screen Hack" toggle ile sürekli çalıştır.
+- "Test Mesajı" ile dene.
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[HOTKEYS KATEGORİSİ]
-Tüm tuş atamaları ve Hold/Toggle modları.
+[HOTKEYS]
+Tüm tuş atamaları HOTKEYS kategorisinde.
 
 [CONFIG]
 Save/Load ayarları.
@@ -1361,6 +1363,5 @@ task.delay(5, function() splash:Destroy() end)
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
 print("=== VISITING v15 YÜKLENDİ ===")
-print("SCREEN HACK kategorisi eklendi.")
-print("RemoteEvent aranacak, bulunursa FireServer gönderilecek.")
-print("Bulunamazsa client-side mesaj gösterilecek.")
+print("SCREEN HACK kategorisinde 'Find RemoteEvent' butonuna tıkla!")
+print("Sonra 'Test Mesajı' ile dene veya toggle'ı aç.")
