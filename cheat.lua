@@ -1,4 +1,4 @@
--- VISITING v14.1 - SOUND HACK FIX (ÇALIŞAN SES)
+-- VISITING v15 - SOUND HACK (ÇALIŞAN)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -6,15 +6,17 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VS_V14"
+ScreenGui.Name = "VS_V15"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
+-- ANA MENÜ
 local Main = Instance.new("Frame")
 Main.Size = UDim2.new(0, 680, 0, 760)
 Main.Position = UDim2.new(0.5, -340, 0.02, 0)
@@ -56,7 +58,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v14.1"
+Txt.Text = "VISITING v15"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -88,6 +90,7 @@ Instance.new("UICorner", RightPanel).CornerRadius = UDim.new(0, 0)
 
 _G.Dropdowns = {}
 
+-- ÖZELLİKLER
 local Features = {
     Fly = {state = false, speed = 60, key = Enum.KeyCode.F1, mode = "Toggle"},
     NoClip = {state = false, key = Enum.KeyCode.F2, mode = "Toggle"},
@@ -110,93 +113,76 @@ local Holding = {}
 local WalkSpeed = 16
 local FOVValue = 70
 local SoundLoopConnection = nil
+local SoundText = nil
 
-local function GetPlayerNames()
-    local names = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then table.insert(names, p.Name) end
-    end
-    if #names == 0 then table.insert(names, "No Players") end
-    return names
-end
-
-local function GetPlayerByName(name)
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Name:lower() == name:lower() then return p end
-    end
-    return nil
-end
-
-local function UpdateAllDropdowns()
-    local names = GetPlayerNames()
-    for _, dd in ipairs(_G.Dropdowns) do
-        if type(dd) == "function" then pcall(dd, names) end
-    end
-end
-
-Players.PlayerAdded:Connect(function() task.wait(0.5) UpdateAllDropdowns() end)
-Players.PlayerRemoving:Connect(function() task.wait(0.5) UpdateAllDropdowns() end)
-
-local function FindRemoteEvent()
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") then
-            local n = v.Name:lower()
-            if n:find("spin") or n:find("rotate") or n:find("character") or n:find("update") then
-                return v
-            end
-        end
-    end
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") then
-            return v
-        end
-    end
-    return nil
-end
-local SpinRemote = FindRemoteEvent()
-
--- SOUND HACK FONKSİYONLARI (FIXED)
-local function FindSoundRemote()
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") then
-            local n = v.Name:lower()
-            if n:find("sound") or n:find("play") or n:find("audio") or n:find("music") or n:find("effect") then
-                return v
-            end
-        end
-    end
-    return nil
-end
-
+-- SES VE EKRAN BİLDİRİMİ
 local function PlayVisitingSound()
-    local soundRemote = FindSoundRemote()
-    -- GEÇERLİ BİR SES ID'si (Roblox tema müziği)
-    local soundId = "rbxassetid://1847652744"
+    local soundId = "rbxassetid://1847652744" -- Roblox teması (çalışıyor)
     
-    if soundRemote then
-        pcall(function()
-            soundRemote:FireServer(soundId, "play", 10)
-            print("[SOUND] RemoteEvent ile ses çalma komutu gönderildi.")
+    -- EKRANDA BÜYÜK YAZI GÖSTER
+    if SoundText then SoundText:Destroy() end
+    SoundText = Instance.new("TextLabel", ScreenGui)
+    SoundText.Size = UDim2.new(1, 0, 0.3, 0)
+    SoundText.Position = UDim2.new(0, 0, 0.35, 0)
+    SoundText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    SoundText.BackgroundTransparency = 0.3
+    SoundText.Text = "DÜNYANIN EN İYİ HİLESİ\nVISITING SOFTWARE"
+    SoundText.TextColor3 = Color3.fromRGB(0, 200, 255)
+    SoundText.Font = Enum.Font.GothamBlack
+    SoundText.TextSize = 50
+    SoundText.TextScaled = true
+    SoundText.TextWrapped = true
+    SoundText.TextXAlignment = Enum.TextXAlignment.Center
+    SoundText.TextYAlignment = Enum.TextYAlignment.Center
+    SoundText.ZIndex = 999
+    Instance.new("UICorner", SoundText).CornerRadius = UDim.new(0, 16)
+    
+    -- YAZIYI YANIP SÖNDÜR
+    local tween1 = TweenService:Create(SoundText, TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+        TextColor3 = Color3.fromRGB(255, 255, 255)
+    })
+    local tween2 = TweenService:Create(SoundText, TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+        TextColor3 = Color3.fromRGB(0, 200, 255)
+    })
+    local count = 0
+    local tweenConn
+    tweenConn = RunService.RenderStepped:Connect(function()
+        count = count + 1
+        if count % 30 == 0 then
+            tween1:Play()
+        elseif count % 30 == 15 then
+            tween2:Play()
+        end
+        if count > 120 then
+            tweenConn:Disconnect()
+            SoundText:Destroy()
+            SoundText = nil
+        end
+    end)
+    
+    -- SES ÇAL
+    local sound = Instance.new("Sound", Workspace)
+    sound.SoundId = soundId
+    sound.Volume = 5
+    sound.Parent = Workspace
+    sound:Play()
+    print("[SOUND] Çalındı: " .. soundId)
+    
+    -- ECHO EFEKTİ
+    task.delay(0.5, function()
+        local sound2 = Instance.new("Sound", Workspace)
+        sound2.SoundId = soundId
+        sound2.Volume = 3
+        sound2.Parent = Workspace
+        sound2:Play()
+        task.delay(2, function()
+            sound2:Destroy()
         end)
-    else
-        -- Client-side ses çal
-        local sound = Instance.new("Sound")
-        sound.SoundId = soundId
-        sound.Volume = 10
-        sound.Parent = Workspace
-        -- Echo efekti
-        local echo = Instance.new("EchoSoundEffect")
-        echo.Delay = 0.5
-        echo.DecayRate = 0.5
-        echo.WetLevel = 0.6
-        echo.DryLevel = 0.4
-        echo.Parent = sound
-        sound:Play()
-        print("[SOUND] Client-side ses çalındı (ID: " .. soundId .. ")")
-        task.delay(5, function()
-            sound:Destroy()
-        end)
-    end
+    end)
+    
+    task.delay(4, function()
+        sound:Destroy()
+    end)
 end
 
 function StartSoundLoop()
@@ -204,16 +190,18 @@ function StartSoundLoop()
     SoundLoopConnection = RunService.RenderStepped:Connect(function()
         if not Features.SoundLoop.state then return end
         PlayVisitingSound()
-        task.wait(3)
+        task.wait(5)
     end)
     print("[SOUND LOOP] Aktif")
 end
 
 function StopSoundLoop()
     if SoundLoopConnection then SoundLoopConnection:Disconnect(); SoundLoopConnection = nil end
+    if SoundText then SoundText:Destroy(); SoundText = nil end
     print("[SOUND LOOP] Kapandı")
 end
 
+-- DİĞER FONKSİYONLAR (KISALTILMIŞ, ÖNCEKİ VERSİYONLARLA AYNI)
 function StartFly()
     if Connections.Fly then Connections.Fly:Disconnect(); Connections.Fly = nil end
     local char = LocalPlayer.Character
@@ -400,6 +388,10 @@ end
 
 function StartSpinbot()
     if Connections.Spinbot then Connections.Spinbot:Disconnect(); Connections.Spinbot = nil end
+    local SpinRemote = nil
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find("spin") then SpinRemote = v break end
+    end
     Connections.Spinbot = RunService.RenderStepped:Connect(function()
         if not Features.Spinbot.state then return end
         SpinAngle = (SpinAngle + Features.Spinbot.speed * 3.5) % 360
@@ -416,7 +408,7 @@ function StartSpinbot()
             end
         end
     end)
-    print("[SPINBOT] Aktif" .. (SpinRemote and " (Server-side)" or " (Client-side)"))
+    print("[SPINBOT] Aktif")
 end
 
 function StopSpinbot()
@@ -641,6 +633,7 @@ function DrawFOVCircle()
     end)
 end
 
+-- MENÜ OLUŞTURMA
 local function ClearRight()
     for _, v in ipairs(RightPanel:GetChildren()) do
         if v:IsA("ScrollingFrame") then v:Destroy() end
@@ -912,7 +905,7 @@ local function BuildCategory(cat)
             Features.ESP.color = colors[idx]
         end)
     elseif cat == "SOUND" then
-        Section("SOUND HACK")
+        Section("SOUND HACK - CLIENT SIDE")
         Toggle("Loop Sound", Features.SoundLoop.state, function(v)
             Features.SoundLoop.state = v
             if v then StartSoundLoop() else StopSoundLoop() end
@@ -920,17 +913,17 @@ local function BuildCategory(cat)
         Button("Play Sound Once", function()
             PlayVisitingSound()
         end)
-        local soundInfo = Instance.new("TextLabel", Scroll)
-        soundInfo.Size = UDim2.new(1, -10, 0, 80)
-        soundInfo.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        soundInfo.Text = "SES ÇALIŞIYOR (Roblox tema müziği)\nRemoteEvent aranıyor... Bulunursa FireServer gönderilir.\nBulunamazsa client-side ses çalar (sadece sen duyarsın)."
-        soundInfo.TextColor3 = Color3.fromRGB(200, 200, 210)
-        soundInfo.Font = Enum.Font.Gotham
-        soundInfo.TextSize = 12
-        soundInfo.TextXAlignment = Enum.TextXAlignment.Left
-        soundInfo.TextYAlignment = Enum.TextYAlignment.Top
-        soundInfo.TextWrapped = true
-        Instance.new("UICorner", soundInfo).CornerRadius = UDim.new(0, 10)
+        local info = Instance.new("TextLabel", Scroll)
+        info.Size = UDim2.new(1, -10, 0, 60)
+        info.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
+        info.Text = "Sadece SEN duyarsın.\nEkranda büyük yazı ile 'DÜNYANIN EN İYİ HİLESİ VISITING SOFTWARE' yazar.\nEcho efekti ile yankılanır."
+        info.TextColor3 = Color3.fromRGB(200, 200, 210)
+        info.Font = Enum.Font.Gotham
+        info.TextSize = 12
+        info.TextXAlignment = Enum.TextXAlignment.Left
+        info.TextYAlignment = Enum.TextYAlignment.Top
+        info.TextWrapped = true
+        Instance.new("UICorner", info).CornerRadius = UDim.new(0, 10)
     elseif cat == "HOTKEYS" then
         Section("HOTKEYS")
         KeybindRow("Fly", "Fly")
@@ -1113,30 +1106,29 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v14.1 GUIDE
+          VISITING v15 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[SOUND HACK - FIXED]
-- Roblox tema müziği çalar (ID: 1847652744)
-- RemoteEvent arar, bulursa FireServer gönderir
-- Bulamazsa client-side ses çalar (sadece sen duyarsın)
-- Loop toggle ile sürekli çalabilir
-- Echo efekti ile yankılanır
+[SOUND HACK]
+Sadece SEN duyarsın. Ekranda büyük yazı ile mesaj gösterir.
+Loop ile sürekli çalabilir. Echo efekti ile yankılanır.
 
-[AIMBOT vs SILENT AIM FARKI]
-Aimbot: Kamera hedefe doğru hareket eder
+[AIMBOT vs SILENT AIM]
+Aimbot: Kamera hedefe doğru hareket eder (FOV içinde)
 Silent Aim: Kamera oynamaz, mermi hedefin kafasına gider
 
 [SPINBOT]
 Sadece Y ekseninde döner, fly'ı bozmaz.
 
 [HOTKEYS]
-F1-F10 ile tüm özellikler kontrol edilir.
-H ile Hold/Toggle modu değiştirilir.
+Tüm tuş atamaları ve Hold/Toggle modları orada.
+
+[CONFIG]
+Save/Load ile ayarlar kaydedilir.
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -1144,7 +1136,7 @@ H ile Hold/Toggle modu değiştirilir.
 ═══════════════════════════════════════
 ]]
         local g = Instance.new("TextLabel", Scroll)
-        g.Size = UDim2.new(1, -10, 0, 600)
+        g.Size = UDim2.new(1, -10, 0, 580)
         g.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
         g.Text = guideText
         g.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -1320,7 +1312,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v14.1 | INSERT | END | SOUND FIX"
+splash.Text = "VISITING v15 | INSERT | END | SOUND HAZIR"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1330,7 +1322,7 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v14.1 YÜKLENDİ ===")
-print("SOUND HACK FIXED - Roblox tema müziği çalıyor.")
-print("Loop açıkken her 3 saniyede bir ses çalar.")
-print("Echo efekti ile yankılanma aktif.")
+print("=== VISITING v15 YÜKLENDİ ===")
+print("SOUND HACK: Sadece sen duyarsın, ekranda devasa yazı çıkar.")
+print("Loop ile sürekli çalabilirsin.")
+print("Echo efekti ile yankılanır.")
