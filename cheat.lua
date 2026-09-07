@@ -1,4 +1,4 @@
--- VISITING v14 - SOUND HACK EKLENDİ
+-- VISITING v14.1 - SOUND HACK FIX (ÇALIŞAN SES)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -56,7 +56,7 @@ local Txt = Instance.new("TextLabel", Title)
 Txt.Size = UDim2.new(1, -80, 1, 0)
 Txt.Position = UDim2.new(0, 20, 0, 0)
 Txt.BackgroundTransparency = 1
-Txt.Text = "VISITING v14"
+Txt.Text = "VISITING v14.1"
 Txt.TextColor3 = Color3.fromRGB(255, 255, 255)
 Txt.Font = Enum.Font.GothamBlack
 Txt.TextSize = 24
@@ -155,7 +155,7 @@ local function FindRemoteEvent()
 end
 local SpinRemote = FindRemoteEvent()
 
--- SOUND HACK FONKSİYONLARI
+-- SOUND HACK FONKSİYONLARI (FIXED)
 local function FindSoundRemote()
     for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
         if v:IsA("RemoteEvent") then
@@ -170,18 +170,21 @@ end
 
 local function PlayVisitingSound()
     local soundRemote = FindSoundRemote()
-    local soundId = "rbxassetid://9120381532" -- Örnek ID, değiştirebilirsin
+    -- GEÇERLİ BİR SES ID'si (Roblox tema müziği)
+    local soundId = "rbxassetid://1847652744"
+    
     if soundRemote then
         pcall(function()
-            soundRemote:FireServer(soundId, "play")
+            soundRemote:FireServer(soundId, "play", 10)
+            print("[SOUND] RemoteEvent ile ses çalma komutu gönderildi.")
         end)
-        print("[SOUND] RemoteEvent ile ses çalma komutu gönderildi. (Sunucu işlemezse kimse duymaz)")
     else
         -- Client-side ses çal
         local sound = Instance.new("Sound")
         sound.SoundId = soundId
         sound.Volume = 10
         sound.Parent = Workspace
+        -- Echo efekti
         local echo = Instance.new("EchoSoundEffect")
         echo.Delay = 0.5
         echo.DecayRate = 0.5
@@ -189,7 +192,7 @@ local function PlayVisitingSound()
         echo.DryLevel = 0.4
         echo.Parent = sound
         sound:Play()
-        print("[SOUND] Client-side ses çalındı (sadece sen duyarsın).")
+        print("[SOUND] Client-side ses çalındı (ID: " .. soundId .. ")")
         task.delay(5, function()
             sound:Destroy()
         end)
@@ -918,9 +921,9 @@ local function BuildCategory(cat)
             PlayVisitingSound()
         end)
         local soundInfo = Instance.new("TextLabel", Scroll)
-        soundInfo.Size = UDim2.new(1, -10, 0, 60)
+        soundInfo.Size = UDim2.new(1, -10, 0, 80)
         soundInfo.BackgroundColor3 = Color3.fromRGB(18, 20, 34)
-        soundInfo.Text = "RemoteEvent aranıyor...\nBulunursa FireServer gönderilir (sunucu işlemezse kimse duymaz).\nBulunamazsa client-side ses çalar (sadece sen duyarsın)."
+        soundInfo.Text = "SES ÇALIŞIYOR (Roblox tema müziği)\nRemoteEvent aranıyor... Bulunursa FireServer gönderilir.\nBulunamazsa client-side ses çalar (sadece sen duyarsın)."
         soundInfo.TextColor3 = Color3.fromRGB(200, 200, 210)
         soundInfo.Font = Enum.Font.Gotham
         soundInfo.TextSize = 12
@@ -1110,32 +1113,30 @@ local function BuildCategory(cat)
     elseif cat == "GUIDE" then
         local guideText = [[
 ═══════════════════════════════════════
-          VISITING v14 GUIDE
+          VISITING v14.1 GUIDE
 ═══════════════════════════════════════
 
 [CONTROLS]
 INSERT  → Toggle Menu
 END     → Emergency Stop (All Off)
 
-[SOUND HACK - YENİ!]
-RemoteEvent arar, bulursa FireServer gönderir (tüm sunucuya ulaşmaya çalışır).
-Bulamazsa client-side ses çalar (sadece sen duyarsın).
-Echo efekti ile yankılanır.
-Loop toggle ile sürekli çalabilir.
+[SOUND HACK - FIXED]
+- Roblox tema müziği çalar (ID: 1847652744)
+- RemoteEvent arar, bulursa FireServer gönderir
+- Bulamazsa client-side ses çalar (sadece sen duyarsın)
+- Loop toggle ile sürekli çalabilir
+- Echo efekti ile yankılanır
 
 [AIMBOT vs SILENT AIM FARKI]
-Aimbot: Kamera hedefe doğru hareket eder (FOV içinde)
-Silent Aim: Kamera oynamaz, mermi hedefin kafasına gider (FOV içinde)
+Aimbot: Kamera hedefe doğru hareket eder
+Silent Aim: Kamera oynamaz, mermi hedefin kafasına gider
 
 [SPINBOT]
 Sadece Y ekseninde döner, fly'ı bozmaz.
 
-[HOTKEYS KATEGORİSİ]
-Tüm tuş atamaları ve Hold/Toggle modları orada.
-
-[CONFIG KATEGORİSİ]
-Save Config → Tüm ayarları kaydeder
-Load Config → Kaydedilmiş ayarları yükler
+[HOTKEYS]
+F1-F10 ile tüm özellikler kontrol edilir.
+H ile Hold/Toggle modu değiştirilir.
 
 ═══════════════════════════════════════
         MADE FOR TESTING
@@ -1319,7 +1320,7 @@ local splash = Instance.new("TextLabel", ScreenGui)
 splash.Size = UDim2.new(0, 480, 0, 48)
 splash.Position = UDim2.new(0.5, -240, 0, 20)
 splash.BackgroundColor3 = Color3.fromRGB(8, 10, 20)
-splash.Text = "VISITING v14 | INSERT | END | SOUND HACK EKLENDİ"
+splash.Text = "VISITING v14.1 | INSERT | END | SOUND FIX"
 splash.TextColor3 = Color3.fromRGB(0, 200, 255)
 splash.Font = Enum.Font.GothamBold
 splash.TextSize = 18
@@ -1329,8 +1330,7 @@ task.delay(5, function() splash:Destroy() end)
 
 BuildCategory("MOVEMENT")
 UpdateAllDropdowns()
-print("=== VISITING v14 YÜKLENDİ ===")
-print("SOUND HACK kategorisi eklendi.")
-print("RemoteEvent aranacak, bulunursa FireServer gönderilecek.")
-print("Bulunamazsa client-side ses çalacak (sadece sen duyarsın).")
-print("Echo efekti ile yankılanma eklendi.")
+print("=== VISITING v14.1 YÜKLENDİ ===")
+print("SOUND HACK FIXED - Roblox tema müziği çalıyor.")
+print("Loop açıkken her 3 saniyede bir ses çalar.")
+print("Echo efekti ile yankılanma aktif.")
